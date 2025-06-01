@@ -8,7 +8,12 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://rimumu.github.io',
+    'http://localhost:3000' // for local testing
+  ]
+}));
 app.use(express.json());
 app.use(express.static('public')); // Serve your HTML, CSS, JS files from 'public' folder
 
