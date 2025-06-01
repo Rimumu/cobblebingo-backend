@@ -1,5 +1,0 @@
- # Scrubbed by Glitch 2025-05-29T12:51:51+0000
-
-MONGODB_URI=mongodb+srv://greatrimu:Tempest$2001@cobblemon-bingo.x7isdid.mongodb.net/?retryWrites=true&w=majority&appName=cobblemon-bingo
-NODE_ENV=production
-PORT=3000
