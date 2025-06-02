@@ -12,6 +12,8 @@ app.use(cors({
     /^https:\/\/.*\.vercel\.app$/,  // Vercel deployments
     /^https:\/\/.*\.netlify\.app$/,  // Netlify deployments
     /^https:\/\/.*\.railway\.app$/,  // Railway deployments
+    /^https:\/\/.*\.greatrimu\.cloud$/,  // Your custom domain
+    'https://cobblebingo.greatrimu.cloud',  // Specific frontend domain
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'http://localhost:5500',
