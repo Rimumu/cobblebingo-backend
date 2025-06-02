@@ -89,15 +89,11 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/cobble
 
 // Connection options optimized for Railway/cloud deployment
 const mongooseOptions = {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
   serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
   socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
   maxPoolSize: 10, // Maintain up to 10 socket connections
   minPoolSize: 1, // Maintain at least 1 socket connection
   maxIdleTimeMS: 30000, // Close connections after 30s of inactivity
-  bufferCommands: false, // Disable mongoose buffering
-  bufferMaxEntries: 0, // Disable mongoose buffering
   retryWrites: true,
   retryReads: true
 };
