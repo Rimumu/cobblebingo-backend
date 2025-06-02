@@ -5,17 +5,43 @@ const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8000;
 
 // Middleware
 app.use(cors({
   origin: [
-    'https://rimumu.github.io',
-    'http://localhost:3000' // for local testing
-  ]
+    'https://rimumu.github.io/cobblebingo', // Replace with your actual GitHub Pages URL
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:5500',
+    'http://127.0.0.1:5500'
+  ],
+  credentials: true
 }));
-app.use(express.json());
-app.use(express.static('public')); // Serve your HTML, CSS, JS files from 'public' folder
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Health check endpoint (important for Koyeb)
+app.get('/', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Cobblemon Bingo API is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get('/health', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Server is healthy',
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get("/ping", (req, res) => {
+  res.status(200).send("OK");
+});
 
 // MongoDB Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/cobblemon-bingo';
@@ -24,8 +50,14 @@ mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => console.log('Connected to MongoDB'))
-.catch(err => console.error('MongoDB connection error:', err));
+.then(() => {
+  console.log('Connected to MongoDB');
+  console.log(`Database: ${MONGODB_URI.includes('mongodb.net') ? 'MongoDB Atlas' : 'Local MongoDB'}`);
+})
+.catch(err => {
+  console.error('MongoDB connection error:', err);
+  process.exit(1);
+});
 
 // Schema for Bingo Cards
 const bingoCardSchema = new mongoose.Schema({
@@ -36,7 +68,7 @@ const bingoCardSchema = new mongoose.Schema({
     index: true
   },
   cardData: {
-    difficulty: String,  // Changed from rarity to difficulty
+    difficulty: String,
     pokemon: [{
       name: String,
       id: String,
@@ -47,7 +79,7 @@ const bingoCardSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now,
-    expires: 2592000 // 30 days TTL (Time To Live)
+    expires: 2592000 // 30 days TTL
   },
   usageCount: {
     type: Number,
@@ -72,7 +104,7 @@ function generateUniqueCode() {
 // Generate and store a new bingo card
 app.post('/api/generate-card', async (req, res) => {
   try {
-    const { difficulty, pokemon } = req.body;  // Changed from rarity to difficulty
+    const { difficulty, pokemon } = req.body;
 
     if (!pokemon || !Array.isArray(pokemon) || pokemon.length !== 25) {
       return res.status(400).json({ 
@@ -105,7 +137,7 @@ app.post('/api/generate-card', async (req, res) => {
     const bingoCard = new BingoCard({
       code,
       cardData: {
-        difficulty: difficulty || '',  // Changed from rarity to difficulty
+        difficulty: difficulty || '',
         pokemon: pokemon.map(p => ({
           name: p.name || '',
           id: p.id || '',
@@ -224,21 +256,43 @@ app.get('/api/stats', async (req, res) => {
   }
 });
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    success: true, 
-    message: 'Server is running',
-    timestamp: new Date().toISOString()
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({
+    success: false,
+    error: 'Internal server error'
+  });
+});
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    error: 'Route not found'
   });
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`MongoDB URI: ${MONGODB_URI.replace(/\/\/.*@/, '//***:***@')}`);
 });
 
-app.get("/ping", (req, res) => {
-  res.status(200).send("OK");
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  mongoose.connection.close(() => {
+    console.log('MongoDB connection closed.');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  mongoose.connection.close(() => {
+    console.log('MongoDB connection closed.');
+    process.exit(0);
+  });
 });
