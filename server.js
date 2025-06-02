@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 8000;
 // Updated CORS configuration in your server
 app.use(cors({
   origin: [
-    'https://cobblebingo.vercel.app', // Your GitHub Pages URL
+    'https://rimumu.github.io', // Your GitHub Pages URL
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'http://localhost:5500',
