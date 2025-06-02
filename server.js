@@ -7,19 +7,28 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 8000;
 
-// Updated CORS configuration for Vercel frontend
+// Updated CORS configuration for your Express backend
 app.use(cors({
   origin: [
     /^https:\/\/.*\.vercel\.app$/,  // Allow all Vercel subdomains
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'http://localhost:5500',
-    'http://127.0.0.1:5500'
+    'http://127.0.0.1:5500',
+    // Add your specific Vercel URL here
+    'https://your-frontend-name.vercel.app', // Replace with your actual Vercel URL
+    // Add Back4App domain if needed
+    /^https:\/\/.*\.back4app\.io$/
   ],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Explicitly allow methods
-  allowedHeaders: ['Content-Type', 'Authorization'] // Allow necessary headers
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  preflightContinue: false,
+  optionsSuccessStatus: 200
 }));
+
+// Add explicit preflight handling
+app.options('*', cors()); // Enable preflight for all routes
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
