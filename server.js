@@ -7,10 +7,10 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 8000;
 
-// Updated CORS configuration in your server
+// Updated CORS configuration for Vercel frontend
 app.use(cors({
   origin: [
-    'https://rimumu.github.io', // Your GitHub Pages URL
+    /^https:\/\/.*\.vercel\.app$/,  // Allow all Vercel subdomains
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'http://localhost:5500',
