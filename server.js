@@ -297,6 +297,14 @@ app.post('/api/generate-card', async (req, res) => {
 // Retrieve a bingo card by code
 app.get('/api/get-card/:code', async (req, res) => {
   try {
+    // Validate that code parameter exists
+    if (!req.params.code) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Code parameter is required.' 
+      });
+    }
+
     const code = req.params.code.toUpperCase().trim();
 
     // Validate code format
@@ -345,6 +353,15 @@ app.get('/api/get-card/:code', async (req, res) => {
 // Validate if a code exists
 app.get('/api/validate-code/:code', async (req, res) => {
   try {
+    // Validate that code parameter exists
+    if (!req.params.code) {
+      return res.status(400).json({ 
+        success: false,
+        exists: false,
+        error: 'Code parameter is required.' 
+      });
+    }
+
     const code = req.params.code.toUpperCase().trim();
 
     // Validate code format
