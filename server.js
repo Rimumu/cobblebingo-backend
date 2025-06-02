@@ -7,16 +7,18 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 8000;
 
-// Middleware
+// Updated CORS configuration in your server
 app.use(cors({
   origin: [
-    'https://rimumu.github.io', // Replace with your actual GitHub Pages URL
+    'https://rimumu.github.io', // Your GitHub Pages URL
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'http://localhost:5500',
     'http://127.0.0.1:5500'
   ],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Explicitly allow methods
+  allowedHeaders: ['Content-Type', 'Authorization'] // Allow necessary headers
 }));
 
 app.use(express.json({ limit: '10mb' }));
