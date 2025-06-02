@@ -276,8 +276,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler - FIXED: Use a regular expression instead of '*'
-app.use(/.*/, (req, res) => {
+// 404 handler - Use '*' instead of regex
+app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
     error: 'Route not found'
