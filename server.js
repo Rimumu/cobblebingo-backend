@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const { v4: uuidv4 } = require('uuid'); // For generating session IDs
 require('dotenv').config();
 
 const app = express();
@@ -188,6 +189,72 @@ bingoCardSchema.index({ createdAt: -1, usageCount: -1 });
 
 const BingoCard = mongoose.model('BingoCard', bingoCardSchema);
 
+// Schema for Bingo Sessions
+const bingoSessionSchema = new mongoose.Schema({
+  sessionId: {
+    type: String,
+    required: true,
+    unique: true,
+    index: true,
+  },
+  cardCode: { // To link the session to a specific bingo card
+    type: String,
+    required: true,
+    index: true,
+    uppercase: true,
+  },
+  completedCells: {
+    type: [Boolean],
+    default: () => Array(25).fill(false), // Stores the state of each of the 25 cells
+    validate: {
+      validator: function(v) {
+        return Array.isArray(v) && v.length === 25 && v.every(val => typeof val === 'boolean');
+      },
+      message: 'Completed cells must be an array of 25 booleans.'
+    }
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+    expires: 2592000, // 30 days TTL, same as cards
+    index: true
+  },
+  lastAccessed: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+// Add compound index for querying sessions by cardCode
+bingoSessionSchema.index({ cardCode: 1, lastAccessed: -1 });
+
+// Helper function to generate unique session IDs (using uuid)
+async function generateUniqueSessionId() {
+  let sessionId;
+  let isUnique = false;
+  let attempts = 0;
+  const maxAttempts = 10; // Reduced attempts as UUIDs are highly unique
+
+  while (!isUnique && attempts < maxAttempts) {
+    sessionId = `SESS-${uuidv4()}`; // Example prefix
+    try {
+      const existing = await BingoSession.findOne({ sessionId }).lean();
+      if (!existing) {
+        isUnique = true;
+      }
+    } catch (dbErr) {
+      console.error('Database error during session ID generation:', dbErr);
+      // Potentially retry or handle error
+    }
+    attempts++;
+  }
+
+  if (!isUnique) {
+    throw new Error('Unable to generate unique session ID.');
+  }
+  return sessionId;
+}
+
 // Helper function to generate unique codes
 function generateUniqueCode() {
   const chars = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // Removed confusing characters
@@ -199,6 +266,55 @@ function generateUniqueCode() {
 }
 
 // API Routes with enhanced error handling
+
+// Create or get a session for a card
+app.post('/api/session/init', async (req, res) => {
+  try {
+    const { cardCode } = req.body;
+
+    if (!cardCode) {
+      return res.status(400).json({ success: false, error: 'cardCode is required.' });
+    }
+
+    // Validate cardCode format (optional, but good practice)
+    if (!/^CB[0-9A-HJ-NP-Z]{6}$/.test(cardCode.toUpperCase())) {
+        return res.status(400).json({ success: false, error: 'Invalid cardCode format.' });
+    }
+
+    // Check if the card itself exists
+    const cardExists = await BingoCard.findOne({ code: cardCode.toUpperCase() }).lean();
+    if (!cardExists) {
+        return res.status(404).json({ success: false, error: 'Associated card not found.' });
+    }
+
+    const sessionId = await generateUniqueSessionId();
+    const newSession = new BingoSession({
+      sessionId,
+      cardCode: cardCode.toUpperCase(),
+      // completedCells will use default from schema
+    });
+    await newSession.save();
+    console.log(`✅ Initialized new session: ${sessionId} for card: ${cardCode}`);
+    res.status(201).json({
+      success: true,
+      sessionId: newSession.sessionId,
+      cardCode: newSession.cardCode,
+      completedCells: newSession.completedCells,
+      message: 'Session initialized successfully.'
+    });
+
+  } catch (error) {
+    console.error('❌ Error initializing session:', error);
+    if (error.message.includes('Unable to generate unique session ID')) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error while initializing session',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
 
 // Generate and store a new bingo card
 app.post('/api/generate-card', async (req, res) => {
@@ -287,6 +403,91 @@ app.post('/api/generate-card', async (req, res) => {
     res.status(500).json({ 
       success: false,
       error: 'Internal server error while generating card',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Get session data
+app.get('/api/session/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    if (!sessionId) {
+      return res.status(400).json({ success: false, error: 'sessionId parameter is required.' });
+    }
+
+    const session = await BingoSession.findOne({ sessionId });
+
+    if (!session) {
+      return res.status(404).json({ success: false, error: 'Session not found.' });
+    }
+
+    session.lastAccessed = new Date();
+    await session.save();
+
+    console.log(`📋 Retrieved session: ${sessionId}`);
+    res.json({
+      success: true,
+      sessionId: session.sessionId,
+      cardCode: session.cardCode,
+      completedCells: session.completedCells,
+      createdAt: session.createdAt,
+      lastAccessed: session.lastAccessed
+    });
+
+  } catch (error) {
+    console.error('❌ Error retrieving session:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error while retrieving session',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Update completed cells for a session
+app.put('/api/session/:sessionId/update', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { completedCells } = req.body;
+
+    if (!sessionId) {
+      return res.status(400).json({ success: false, error: 'sessionId parameter is required.' });
+    }
+
+    if (!completedCells || !Array.isArray(completedCells) || completedCells.length !== 25 || !completedCells.every(c => typeof c === 'boolean')) {
+      return res.status(400).json({ success: false, error: 'Invalid completedCells data. Expected an array of 25 booleans.' });
+    }
+
+    const session = await BingoSession.findOne({ sessionId });
+
+    if (!session) {
+      return res.status(404).json({ success: false, error: 'Session not found.' });
+    }
+
+    session.completedCells = completedCells;
+    session.lastAccessed = new Date();
+    await session.save();
+
+    console.log(`🔄 Updated session: ${sessionId}`);
+    res.json({
+      success: true,
+      message: 'Session updated successfully.',
+      completedCells: session.completedCells
+    });
+
+  } catch (error) {
+    console.error('❌ Error updating session:', error);
+     if (error.name === 'ValidationError') {
+        return res.status(400).json({
+            success: false,
+            error: 'Validation error for completedCells',
+            details: Object.values(error.errors).map(e => e.message)
+        });
+    }
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error while updating session',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
