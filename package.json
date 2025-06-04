@@ -13,7 +13,7 @@
     "mongoose": "^8.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1"
-    "uuid": "^11.1.0"  // Add this line (the version might differ)
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
