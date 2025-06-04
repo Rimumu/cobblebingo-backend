@@ -228,6 +228,10 @@ const bingoSessionSchema = new mongoose.Schema({
 // Add compound index for querying sessions by cardCode
 bingoSessionSchema.index({ cardCode: 1, lastAccessed: -1 });
 
+// ***** THIS LINE MUST COME BEFORE generateUniqueSessionId *****
+const BingoSession = mongoose.model('BingoSession', bingoSessionSchema);
+// ***** AND ALSO BEFORE ANY OTHER USE OF BingoSession *********
+
 // Helper function to generate unique session IDs (using uuid)
 async function generateUniqueSessionId() {
   let sessionId;
