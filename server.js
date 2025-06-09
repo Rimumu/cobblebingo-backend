@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid'); // For generating session IDs
 require('dotenv').config();
-
+const bcrypt = require('bcryptjs'); 
+const jwt = require('jsonwebtoken');
 const app = express();
 const PORT = process.env.PORT || 8000;
 
@@ -219,6 +220,12 @@ const bingoSessionSchema = new mongoose.Schema({
     expires: 2592000, // 30 days TTL, same as cards
     index: true
   },
+  userId: { // Add this to link session to a user
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    index: true,
+    default: null
+  },
   lastAccessed: {
     type: Date,
     default: Date.now
@@ -231,6 +238,40 @@ bingoSessionSchema.index({ cardCode: 1, lastAccessed: -1 });
 // ***** THIS LINE MUST COME BEFORE generateUniqueSessionId *****
 const BingoSession = mongoose.model('BingoSession', bingoSessionSchema);
 // ***** AND ALSO BEFORE ANY OTHER USE OF BingoSession *********
+
+// --- ADD NEW USER SCHEMA after BingoSession Schema ---
+const userSchema = new mongoose.Schema({
+  username: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+    minlength: 3,
+    maxlength: 20,
+    match: /^[a-zA-Z0-9_]+$/ // Alphanumeric and underscores only
+  },
+  password: {
+    type: String,
+    required: true,
+    minlength: 6
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+// Hash password before saving
+userSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) {
+    return next();
+  }
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+  next();
+});
+
+const User = mongoose.model('User', userSchema);
 
 // Helper function to generate unique session IDs (using uuid)
 async function generateUniqueSessionId() {
@@ -270,6 +311,78 @@ function generateUniqueCode() {
 }
 
 // API Routes with enhanced error handling
+
+// --- ADD NEW AUTHENTICATION API ROUTES ---
+const authRouter = express.Router();
+
+// SIGNUP
+authRouter.post('/signup', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ success: false, error: 'Username and password are required.' });
+    }
+    if (password.length < 6) {
+        return res.status(400).json({ success: false, error: 'Password must be at least 6 characters long.' });
+    }
+
+    let user = await User.findOne({ username });
+    if (user) {
+      return res.status(409).json({ success: false, error: 'Username already exists.' });
+    }
+
+    user = new User({ username, password });
+    await user.save();
+
+    res.status(201).json({ success: true, message: 'User created successfully.' });
+  } catch (error) {
+    console.error('❌ Error during signup:', error);
+    res.status(500).json({ success: false, error: 'Server error during signup.' });
+  }
+});
+
+// LOGIN
+authRouter.post('/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ success: false, error: 'Username and password are required.' });
+    }
+
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials.' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials.' });
+    }
+
+    const payload = {
+      user: {
+        id: user.id,
+        username: user.username
+      }
+    };
+
+    jwt.sign(
+      payload,
+      process.env.JWT_SECRET || 'your_default_jwt_secret', // Use environment variable for secret
+      { expiresIn: '7d' }, // Token expires in 7 days
+      (err, token) => {
+        if (err) throw err;
+        res.json({ success: true, token });
+      }
+    );
+  } catch (error) {
+    console.error('❌ Error during login:', error);
+    res.status(500).json({ success: false, error: 'Server error during login.' });
+  }
+});
+
+// Mount the auth router
+app.use('/api/auth', authRouter);
 
 // Create or get a session for a card
 app.post('/api/session/init', async (req, res) => {
