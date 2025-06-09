@@ -5,8 +5,17 @@ const { v4: uuidv4 } = require('uuid'); // For generating session IDs
 require('dotenv').config();
 const bcrypt = require('bcryptjs'); 
 const jwt = require('jsonwebtoken');
+const { expressjwt: jwtAuth } = require('express-jwt'); // Add this for JWT middleware
 const app = express();
 const PORT = process.env.PORT || 8000;
+
+// --- ADD JWT Middleware for protected routes ---
+const authMiddleware = jwtAuth({
+  secret: process.env.JWT_SECRET || 'your_default_jwt_secret',
+  algorithms: ['HS256'],
+  requestProperty: 'auth' // Decoded token will be in req.auth
+});
+
 
 // Enhanced CORS configuration for Railway
 app.use(cors({
@@ -226,6 +235,16 @@ const bingoSessionSchema = new mongoose.Schema({
     index: true,
     default: null
   },
+  isSaved: { // Add this field
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  sessionName: { // Add this field
+    type: String,
+    trim: true,
+    default: null
+  },
   lastAccessed: {
     type: Date,
     default: Date.now
@@ -384,8 +403,22 @@ authRouter.post('/login', async (req, res) => {
 // Mount the auth router
 app.use('/api/auth', authRouter);
 
+const optionalAuth = (req, res, next) => {
+    // This is a simple version. A more robust solution might use a library.
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return next();
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_default_jwt_secret');
+        req.auth = decoded; // Attach user payload to request
+    } catch (err) {
+        // Invalid token, just ignore and proceed as anonymous
+    }
+    next();
+};
+
 // Create or get a session for a card
-app.post('/api/session/init', async (req, res) => {
+app.post('/api/session/init', optionalAuth, async (req, res) => { // Added optionalAuth
   try {
     const { cardCode } = req.body;
 
@@ -408,10 +441,11 @@ app.post('/api/session/init', async (req, res) => {
     const newSession = new BingoSession({
       sessionId,
       cardCode: cardCode.toUpperCase(),
-      // completedCells will use default from schema
+        // If user is logged in (from optionalAuth), associate the session
+      userId: req.auth ? req.auth.user.id : null
     });
     await newSession.save();
-    console.log(`✅ Initialized new session: ${sessionId} for card: ${cardCode}`);
+    console.log(`✅ Initialized new session: ${sessionId} for user: ${req.auth ? req.auth.user.id : 'Anonymous'}`);
     res.status(201).json({
       success: true,
       sessionId: newSession.sessionId,
@@ -432,6 +466,7 @@ app.post('/api/session/init', async (req, res) => {
     });
   }
 });
+
 
 // Generate and store a new bingo card
 app.post('/api/generate-card', async (req, res) => {
@@ -562,6 +597,22 @@ app.get('/api/session/:sessionId', async (req, res) => {
   }
 });
 
+// GET a user's saved cards
+app.get('/api/user/cards', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.auth.user.id;
+        const savedSessions = await BingoSession.find({ userId, isSaved: true })
+            .sort({ lastAccessed: -1 }) // Show most recent first
+            .select('sessionId sessionName cardCode lastAccessed createdAt') // Select only needed fields
+            .lean(); // Use .lean() for faster read-only queries
+
+        res.json({ success: true, cards: savedSessions });
+    } catch (error) {
+        console.error('❌ Error fetching user cards:', error);
+        res.status(500).json({ success: false, error: 'Server error while fetching cards.' });
+    }
+});
+
 // Update completed cells for a session
 app.put('/api/session/:sessionId/update', async (req, res) => {
   try {
@@ -608,6 +659,76 @@ app.put('/api/session/:sessionId/update', async (req, res) => {
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
+});
+
+// SAVE a session with a name
+app.put('/api/session/:sessionId/save', authMiddleware, async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        const { sessionName } = req.body;
+        const userId = req.auth.user.id;
+
+        if (!sessionName) {
+            return res.status(400).json({ success: false, error: 'sessionName is required.' });
+        }
+
+        const session = await BingoSession.findOneAndUpdate(
+            { sessionId, userId }, // Ensure user can only save their own session
+            { isSaved: true, sessionName: sessionName, lastAccessed: new Date() },
+            { new: true } // Return the updated document
+        );
+
+        if (!session) {
+            return res.status(404).json({ success: false, error: 'Session not found or user unauthorized.' });
+        }
+        res.json({ success: true, message: 'Session saved successfully.', session });
+    } catch (error) {
+        console.error('❌ Error saving session:', error);
+        res.status(500).json({ success: false, error: 'Server error while saving session.' });
+    }
+});
+
+// RENAME a session
+app.put('/api/session/:sessionId/rename', authMiddleware, async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        const { newName } = req.body;
+        const userId = req.auth.user.id;
+
+        if (!newName) {
+            return res.status(400).json({ success: false, error: 'newName is required.' });
+        }
+        
+        const session = await BingoSession.findOneAndUpdate(
+            { sessionId, userId },
+            { sessionName: newName },
+            { new: true }
+        );
+
+        if (!session) {
+            return res.status(404).json({ success: false, error: 'Session not found or user unauthorized.' });
+        }
+        res.json({ success: true, message: 'Session renamed successfully.', session });
+    } catch (error) {
+        // ... error handling
+    }
+});
+
+// DELETE a session
+app.delete('/api/session/:sessionId', authMiddleware, async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        const userId = req.auth.user.id;
+
+        const result = await BingoSession.deleteOne({ sessionId, userId });
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ success: false, error: 'Session not found or user unauthorized.' });
+        }
+        res.json({ success: true, message: 'Session deleted successfully.' });
+    } catch (error) {
+        // ... error handling
+    }
 });
 
 // Retrieve a bingo card by code
