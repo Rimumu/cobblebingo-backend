@@ -13,8 +13,8 @@ const PORT = process.env.PORT || 8000;
 
 // --- 1. ADD a master list of rewardable items. Place this near the top with other definitions. ---
 const rewardableItems = [
-    { itemId: 'kanto_pack_ticket', itemName: 'Kanto Starter Pack Ticket' },
-    { itemId: 'legendary_pack_ticket', itemName: 'Legendary Beasts Pack Ticket' },
+    { itemId: 'lamb_chop_tickett', itemName: 'Lamb Chop Pack Ticket' },
+    { itemId: 'a5_wagyu_ticket', itemName: 'A5 Wagyu Pack Ticket' },
     { itemId: 'shiny_charm_fragment', itemName: 'Shiny Charm Fragment' },
     // Add any other items you want to be able to generate codes for here
 ];
@@ -682,34 +682,34 @@ app.post('/api/redeem', authMiddleware, async (req, res) => {
 // Define the available banners on the server
 const gachaBanners = [
     {
-        id: 'starter_pack',
-        name: 'Kanto Starter Pack',
-        description: 'A special pack containing Pokémon from the Kanto region. A great start for any trainer!',
-        image: 'https://placehold.co/800x450/2E3A4D/EFFFFA?text=Kanto+Starters',
-        requiredItemId: 'kanto_pack_ticket'
+        id: 'lamb_chop_pack', // Changed ID
+        name: 'Lamb Chop Pack', // Changed Name
+        description: 'A hearty pack with a chance to contain delicious and common Pokémon.',
+        image: 'https://placehold.co/800x450/CD7F32/FFFFFF?text=Lamb+Chop+Pack', // New Bronze-themed image
+        requiredItemId: 'lamb_chop_ticket'
     },
     {
-        id: 'legendary_pack',
-        name: 'Legendary Beasts',
-        description: 'A rare pack with a chance to contain a legendary Pokémon from the Johto region.',
-        image: 'https://placehold.co/800x450/D4AF37/000000?text=Legendary+Beasts',
-        requiredItemId: 'legendary_pack_ticket'
+        id: 'a5_wagyu_pack', // Changed ID
+        name: 'A5 Wagyu Pack', // Changed Name
+        description: 'An exquisite and rare pack with a chance to contain the most legendary and flavorful Pokémon.',
+        image: 'https://placehold.co/800x450/B40431/FFFFFF?text=A5+Wagyu+Pack', // New Wagyu-themed image
+        requiredItemId: 'a5_wagyu_ticket'
     }
 ];
 
 // Define what can be obtained from each pack
 const packContents = {
-    starter_pack: [
-        { name: 'Bulbasaur', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/bulbasaur.jpg', weight: 30 },
-        { name: 'Charmander', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/charmander.jpg', weight: 30 },
-        { name: 'Squirtle', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/squirtle.jpg', weight: 30 },
-        { name: 'Pikachu', rarity: 'rare', image: 'https://img.pokemondb.net/artwork/large/pikachu.jpg', weight: 10 },
+    lamb_chop_pack: [ // Changed ID
+        { name: 'Miltank', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/miltank.jpg', weight: 30 },
+        { name: 'Tauros', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/tauros.jpg', weight: 30 },
+        { name: 'Wooloo', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/wooloo.jpg', weight: 30 },
+        { name: 'Lechonk', rarity: 'rare', image: 'https://img.pokemondb.net/artwork/large/lechonk.jpg', weight: 10 },
     ],
-    legendary_pack: [
-        { name: 'Geodude', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/geodude.jpg', weight: 40 },
-        { name: 'Zubat', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/zubat.jpg', weight: 40 },
-        { name: 'Raikou', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/raikou.jpg', weight: 5 },
-        { name: 'Entei', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/entei.jpg', weight: 5 },
+    a5_wagyu_pack: [ // Changed ID
+        { name: 'Spoink', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/spoink.jpg', weight: 40 },
+        { name: 'Tepig', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/tepig.jpg', weight: 40 },
+        { name: 'Kyogre', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/kyogre.jpg', weight: 5 },
+        { name: 'Groudon', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/groudon.jpg', weight: 5 },
     ]
 };
 
