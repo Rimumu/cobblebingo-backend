@@ -458,7 +458,7 @@ app.get('/api/auth/discord/callback', async (req, res) => {
     }
 
     try {
-        // Exchange the authorization code for an access token
+        // ... (The code to exchange the token and get user info remains the same)
         const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
             method: 'POST',
             body: new URLSearchParams({
@@ -478,7 +478,6 @@ app.get('/api/auth/discord/callback', async (req, res) => {
             throw new Error(`Discord token error: ${tokenData.error_description}`);
         }
 
-        // Use the access token to get the user's Discord info
         const userResponse = await fetch('https://discord.com/api/users/@me', {
             headers: {
                 authorization: `${tokenData.token_type} ${tokenData.access_token}`,
@@ -486,7 +485,6 @@ app.get('/api/auth/discord/callback', async (req, res) => {
         });
         const discordUser = await userResponse.json();
 
-        // Save the Discord info to the user's account in your database
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).send("Error: User to link not found.");
@@ -496,8 +494,10 @@ app.get('/api/auth/discord/callback', async (req, res) => {
         user.discordUsername = `${discordUser.username}#${discordUser.discriminator}`;
         await user.save();
 
-        // Redirect the user back to the bingo page with a success message
-        res.redirect('/bingo/?discord_linked=true');
+        // --- THIS IS THE CORRECTED PART ---
+        // Redirect the user back to the FRONTEND bingo page with a success message.
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5500'; // Fallback for local testing
+        res.redirect(`${frontendUrl}/bingo/?discord_linked=true`);
 
     } catch (error) {
         console.error("Error in Discord OAuth callback:", error);
