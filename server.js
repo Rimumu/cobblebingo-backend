@@ -505,6 +505,38 @@ app.get('/api/auth/discord/callback', async (req, res) => {
     }
 });
 
+app.get('/api/user/me', authMiddleware, async (req, res) => {
+    try {
+        const user = await User.findById(req.auth.user.id).select('-password'); // Find user but exclude password
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'User not found.' });
+        }
+        res.json({ success: true, user });
+    } catch (error) {
+        console.error("Error fetching user data:", error);
+        res.status(500).json({ success: false, error: 'Server error while fetching user data.' });
+    }
+});
+
+app.post('/api/auth/discord/unlink', authMiddleware, async (req, res) => {
+    try {
+        const user = await User.findById(req.auth.user.id);
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'User not found.' });
+        }
+
+        // Clear the Discord-related fields
+        user.discordId = null;
+        user.discordUsername = null;
+        await user.save();
+
+        res.json({ success: true, message: 'Discord account unlinked successfully.' });
+    } catch (error) {
+        console.error("Error unlinking discord account:", error);
+        res.status(500).json({ success: false, error: 'Server error while unlinking account.' });
+    }
+});
+
 // Create or get a session for a card
 app.post('/api/session/init', optionalAuth, async (req, res) => { // Added optionalAuth
   try {
