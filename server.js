@@ -6,6 +6,8 @@ require('dotenv').config();
 const bcrypt = require('bcryptjs'); 
 const jwt = require('jsonwebtoken');
 const { expressjwt: jwtAuth } = require('express-jwt'); // Add this for JWT middleware
+const fetch = require('node-fetch'); // Or use another request library like axios
+const { URLSearchParams } = require('url');
 const app = express();
 const PORT = process.env.PORT || 8000;
 
@@ -274,6 +276,16 @@ const userSchema = new mongoose.Schema({
     required: true,
     minlength: 6
   },
+  discordId: {
+    type: String,
+    unique: true,
+    sparse: true, // This allows multiple users to have a null value
+    default: null
+  },
+  discordUsername: {
+    type: String,
+    default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -416,6 +428,73 @@ const optionalAuth = (req, res, next) => {
     }
     next();
 };
+
+app.get('/api/auth/discord', authMiddleware, (req, res) => {
+    const discordAuthUrl = `https://discord.com/api/oauth2/authorize` +
+        `?client_id=${process.env.DISCORD_CLIENT_ID}` +
+        `&redirect_uri=${encodeURIComponent(process.env.DISCORD_REDIRECT_URI)}` +
+        `&response_type=code` +
+        `&scope=identify` + // 'identify' scope gets user info without joining servers
+        `&state=${req.auth.user.id}`; // Pass the user's ID to identify them on callback
+
+    res.redirect(discordAuthUrl);
+});
+
+// Discord redirects the user here after they authorize.
+app.get('/api/auth/discord/callback', async (req, res) => {
+    const { code, state: userId } = req.query;
+
+    if (!code) {
+        return res.status(400).send("Error: Discord callback code not found.");
+    }
+
+    try {
+        // Exchange the authorization code for an access token
+        const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
+            method: 'POST',
+            body: new URLSearchParams({
+                client_id: process.env.DISCORD_CLIENT_ID,
+                client_secret: process.env.DISCORD_CLIENT_SECRET,
+                grant_type: 'authorization_code',
+                code,
+                redirect_uri: process.env.DISCORD_REDIRECT_URI,
+            }),
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+        });
+
+        const tokenData = await tokenResponse.json();
+        if (tokenData.error) {
+            throw new Error(`Discord token error: ${tokenData.error_description}`);
+        }
+
+        // Use the access token to get the user's Discord info
+        const userResponse = await fetch('https://discord.com/api/users/@me', {
+            headers: {
+                authorization: `${tokenData.token_type} ${tokenData.access_token}`,
+            },
+        });
+        const discordUser = await userResponse.json();
+
+        // Save the Discord info to the user's account in your database
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).send("Error: User to link not found.");
+        }
+
+        user.discordId = discordUser.id;
+        user.discordUsername = `${discordUser.username}#${discordUser.discriminator}`;
+        await user.save();
+
+        // Redirect the user back to the bingo page with a success message
+        res.redirect('/bingo/?discord_linked=true');
+
+    } catch (error) {
+        console.error("Error in Discord OAuth callback:", error);
+        res.status(500).send("An error occurred while linking your Discord account.");
+    }
+});
 
 // Create or get a session for a card
 app.post('/api/session/init', optionalAuth, async (req, res) => { // Added optionalAuth
