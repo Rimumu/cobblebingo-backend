@@ -713,23 +713,32 @@ const packContents = {
     ]
 };
 
-// API route to get the list of available banners
+// --- NEW Helper function to generate the full animation reel ---
+function generateAnimationReel(packId, winningItem) {
+    const lootTable = packContents[packId];
+    if (!lootTable) return [];
+
+    let reelItems = [];
+    const reelLength = 80; // A long reel to look infinite
+    const winningIndex = 70; // The predictable winning position
+
+    for (let i = 0; i < reelLength; i++) {
+        if (i === winningIndex) {
+            reelItems.push(winningItem);
+        } else {
+            // Push a random item from the loot table
+            reelItems.push(lootTable[Math.floor(Math.random() * lootTable.length)]);
+        }
+    }
+    return reelItems;
+}
+
+
 app.get('/api/gacha/banners', (req, res) => {
     res.json({ success: true, banners: gachaBanners });
 });
 
-// --- 2. ADD a new route to get the full contents of a pack ---
-app.get('/api/gacha/pack-contents/:packId', (req, res) => {
-    const { packId } = req.params;
-    const contents = packContents[packId];
-    if (contents) {
-        res.json({ success: true, contents });
-    } else {
-        res.status(404).json({ success: false, error: 'Pack contents not found.' });
-    }
-});
-
-// --- 3. UPDATE the /open-pack route to use a weighted random selection ---
+// --- REVISED route to open a pack ---
 app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
     try {
         const { bannerId } = req.body;
@@ -750,7 +759,6 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
         }
         await user.save();
 
-        // --- New Weighted Reward Logic ---
         const possibleRewards = packContents[banner.id];
         const totalWeight = possibleRewards.reduce((sum, item) => sum + item.weight, 0);
         let randomNum = Math.random() * totalWeight;
@@ -763,9 +771,11 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
             }
             randomNum -= item.weight;
         }
-        // -----------------------------
 
-        res.json({ success: true, reward, newInventory: user.inventory });
+        // Generate the animation reel with the winning item included
+        const animationReel = generateAnimationReel(banner.id, reward);
+
+        res.json({ success: true, reward, newInventory: user.inventory, animationReel });
 
     } catch (error) {
         console.error("Error opening pack:", error);
