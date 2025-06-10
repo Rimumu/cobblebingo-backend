@@ -397,15 +397,13 @@ authRouter.post('/login', async (req, res) => {
       }
     };
 
-    jwt.sign(
+    const token = jwt.sign(
       payload,
-      process.env.JWT_SECRET || 'your_default_jwt_secret', // Use environment variable for secret
-      { expiresIn: '7d' }, // Token expires in 7 days
-      (err, token) => {
-        if (err) throw err;
-        res.json({ success: true, token });
-      }
+      process.env.JWT_SECRET || 'your_default_jwt_secret',
+      { expiresIn: '7d' }
     );
+    res.json({ success: true, token });
+    
   } catch (error) {
     console.error('❌ Error during login:', error);
     res.status(500).json({ success: false, error: 'Server error during login.' });
