@@ -700,22 +700,16 @@ const gachaBanners = [
 // Define what can be obtained from each pack
 const packContents = {
     starter_pack: [
-        { name: 'Bulbasaur', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/bulbasaur.jpg' },
-        { name: 'Charmander', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/charmander.jpg' },
-        { name: 'Squirtle', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/squirtle.jpg' },
-        { name: 'Pidgey', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/pidgey.jpg' },
-        { name: 'Rattata', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/rattata.jpg' },
-        { name: 'Caterpie', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/caterpie.jpg' },
+        { name: 'Bulbasaur', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/bulbasaur.jpg', weight: 30 },
+        { name: 'Charmander', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/charmander.jpg', weight: 30 },
+        { name: 'Squirtle', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/squirtle.jpg', weight: 30 },
+        { name: 'Pikachu', rarity: 'rare', image: 'https://img.pokemondb.net/artwork/large/pikachu.jpg', weight: 10 },
     ],
     legendary_pack: [
-        // Add more common/uncommon items to make the legendaries feel rarer
-        { name: 'Geodude', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/geodude.jpg' },
-        { name: 'Zubat', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/zubat.jpg' },
-        { name: 'Hoothoot', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/hoothoot.jpg' },
-        { name: 'Sentret', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/sentret.jpg' },
-        { name: 'Raikou', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/raikou.jpg' },
-        { name: 'Entei', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/entei.jpg' },
-        { name: 'Suicune', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/suicune.jpg' },
+        { name: 'Geodude', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/geodude.jpg', weight: 40 },
+        { name: 'Zubat', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/zubat.jpg', weight: 40 },
+        { name: 'Raikou', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/raikou.jpg', weight: 5 },
+        { name: 'Entei', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/entei.jpg', weight: 5 },
     ]
 };
 
@@ -743,7 +737,7 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
 
         const banner = gachaBanners.find(b => b.id === bannerId);
         if (!banner) return res.status(404).json({ success: false, error: 'Banner not found.' });
-        
+
         const user = await User.findById(userId);
         const inventoryItem = user.inventory.find(item => item.itemId === banner.requiredItemId);
         if (!inventoryItem || inventoryItem.quantity < 1) {
@@ -756,13 +750,20 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
         }
         await user.save();
 
-        // Securely determine the reward on the server
+        // --- New Weighted Reward Logic ---
         const possibleRewards = packContents[banner.id];
-        // This is a simple random choice. For a real system, you'd implement weighted chances.
-        const reward = possibleRewards[Math.floor(Math.random() * possibleRewards.length)];
-
-        // We no longer add the reward to the inventory here, that's a future step.
-        // We just return what the user won.
+        const totalWeight = possibleRewards.reduce((sum, item) => sum + item.weight, 0);
+        let randomNum = Math.random() * totalWeight;
+        
+        let reward;
+        for (const item of possibleRewards) {
+            if (randomNum < item.weight) {
+                reward = item;
+                break;
+            }
+            randomNum -= item.weight;
+        }
+        // -----------------------------
 
         res.json({ success: true, reward, newInventory: user.inventory });
 
