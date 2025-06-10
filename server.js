@@ -719,26 +719,23 @@ function generateAnimationReel(packId, winningItem) {
     if (!lootTable) return [];
 
     let reelItems = [];
-    const reelLength = 80; // A long reel to look infinite
-    const winningIndex = 70; // The predictable winning position
+    const reelLength = 80;
+    const winningIndex = 70;
 
     for (let i = 0; i < reelLength; i++) {
         if (i === winningIndex) {
             reelItems.push(winningItem);
         } else {
-            // Push a random item from the loot table
             reelItems.push(lootTable[Math.floor(Math.random() * lootTable.length)]);
         }
     }
     return reelItems;
 }
 
-
 app.get('/api/gacha/banners', (req, res) => {
     res.json({ success: true, banners: gachaBanners });
 });
 
-// --- REVISED route to open a pack ---
 app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
     try {
         const { bannerId } = req.body;
@@ -762,7 +759,6 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
         const possibleRewards = packContents[banner.id];
         const totalWeight = possibleRewards.reduce((sum, item) => sum + item.weight, 0);
         let randomNum = Math.random() * totalWeight;
-        
         let reward;
         for (const item of possibleRewards) {
             if (randomNum < item.weight) {
@@ -771,8 +767,10 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
             }
             randomNum -= item.weight;
         }
+        if (!reward) {
+            reward = possibleRewards[0];
+        }
 
-        // Generate the animation reel with the winning item included
         const animationReel = generateAnimationReel(banner.id, reward);
 
         res.json({ success: true, reward, newInventory: user.inventory, animationReel });
