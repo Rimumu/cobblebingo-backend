@@ -496,7 +496,7 @@ app.get('/api/auth/discord/callback', async (req, res) => {
         await user.save();
 
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5500';
-        res.redirect(`${frontendUrl}/bingo/?discord_linked=true`);
+        res.redirect(`${frontendUrl}?discord_linked=true`);
 
     } catch (error) {
         console.error("Error in Discord OAuth callback:", error);
