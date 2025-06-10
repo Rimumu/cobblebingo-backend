@@ -15,9 +15,20 @@ const PORT = process.env.PORT || 8000;
 const authMiddleware = jwtAuth({
   secret: process.env.JWT_SECRET || 'your_default_jwt_secret',
   algorithms: ['HS256'],
-  requestProperty: 'auth' // Decoded token will be in req.auth
+  requestProperty: 'auth',
+  getToken: function fromHeaderOrQuerystring(req) {
+    // This function tells the middleware to look for the token in two places:
+    // 1. In the standard Authorization header (for API calls)
+    if (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer') {
+      return req.headers.authorization.split(' ')[1];
+    } 
+    // 2. In the URL query string (for link clicks like this one)
+    else if (req.query && req.query.token) {
+      return req.query.token;
+    }
+    return null; // No token found
+  }
 });
-
 
 // Enhanced CORS configuration for Railway
 app.use(cors({
