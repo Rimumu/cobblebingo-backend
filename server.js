@@ -698,16 +698,24 @@ const gachaBanners = [
 ];
 
 // Define what can be obtained from each pack
-const packRewards = {
+const packContents = {
     starter_pack: [
-        { name: 'Bulbasaur', rarity: 'common' },
-        { name: 'Charmander', rarity: 'common' },
-        { name: 'Squirtle', rarity: 'common' },
+        { name: 'Bulbasaur', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/bulbasaur.jpg' },
+        { name: 'Charmander', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/charmander.jpg' },
+        { name: 'Squirtle', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/squirtle.jpg' },
+        { name: 'Pidgey', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/pidgey.jpg' },
+        { name: 'Rattata', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/rattata.jpg' },
+        { name: 'Caterpie', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/caterpie.jpg' },
     ],
     legendary_pack: [
-        { name: 'Raikou', rarity: 'legendary' },
-        { name: 'Entei', rarity: 'legendary' },
-        { name: 'Suicune', rarity: 'legendary' },
+        // Add more common/uncommon items to make the legendaries feel rarer
+        { name: 'Geodude', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/geodude.jpg' },
+        { name: 'Zubat', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/zubat.jpg' },
+        { name: 'Hoothoot', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/hoothoot.jpg' },
+        { name: 'Sentret', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/sentret.jpg' },
+        { name: 'Raikou', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/raikou.jpg' },
+        { name: 'Entei', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/entei.jpg' },
+        { name: 'Suicune', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/suicune.jpg' },
     ]
 };
 
@@ -716,35 +724,45 @@ app.get('/api/gacha/banners', (req, res) => {
     res.json({ success: true, banners: gachaBanners });
 });
 
-// API route to open a pack
+// --- 2. ADD a new route to get the full contents of a pack ---
+app.get('/api/gacha/pack-contents/:packId', (req, res) => {
+    const { packId } = req.params;
+    const contents = packContents[packId];
+    if (contents) {
+        res.json({ success: true, contents });
+    } else {
+        res.status(404).json({ success: false, error: 'Pack contents not found.' });
+    }
+});
+
+// --- 3. UPDATE the /open-pack route to use a weighted random selection ---
 app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
     try {
         const { bannerId } = req.body;
         const userId = req.auth.user.id;
 
         const banner = gachaBanners.find(b => b.id === bannerId);
-        if (!banner) {
-            return res.status(404).json({ success: false, error: 'Banner not found.' });
-        }
-
+        if (!banner) return res.status(404).json({ success: false, error: 'Banner not found.' });
+        
         const user = await User.findById(userId);
         const inventoryItem = user.inventory.find(item => item.itemId === banner.requiredItemId);
-
         if (!inventoryItem || inventoryItem.quantity < 1) {
             return res.status(400).json({ success: false, error: 'You do not have the required pack.' });
         }
 
-        // Decrement the item quantity
         inventoryItem.quantity -= 1;
-        // If quantity is zero, remove the item from inventory (optional, but good practice)
         if (inventoryItem.quantity === 0) {
             user.inventory = user.inventory.filter(item => item.itemId !== banner.requiredItemId);
         }
         await user.save();
 
-        // Determine the reward
-        const possibleRewards = packRewards[banner.id];
+        // Securely determine the reward on the server
+        const possibleRewards = packContents[banner.id];
+        // This is a simple random choice. For a real system, you'd implement weighted chances.
         const reward = possibleRewards[Math.floor(Math.random() * possibleRewards.length)];
+
+        // We no longer add the reward to the inventory here, that's a future step.
+        // We just return what the user won.
 
         res.json({ success: true, reward, newInventory: user.inventory });
 
