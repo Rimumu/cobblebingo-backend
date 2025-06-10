@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 8000;
 
 // --- 1. ADD a master list of rewardable items. Place this near the top with other definitions. ---
 const rewardableItems = [
-    { itemId: 'lamb_chop_tickett', itemName: 'Lamb Chop Pack Ticket' },
+    { itemId: 'lamb_chop_ticket', itemName: 'Lamb Chop Pack Ticket' },
     { itemId: 'a5_wagyu_ticket', itemName: 'A5 Wagyu Pack Ticket' },
     { itemId: 'shiny_charm_fragment', itemName: 'Shiny Charm Fragment' },
     // Add any other items you want to be able to generate codes for here
