@@ -541,6 +541,84 @@ app.post('/api/auth/discord/unlink', authMiddleware, async (req, res) => {
     }
 });
 
+// --- GACHA SYSTEM LOGIC ---
+
+// Define the available banners on the server
+const gachaBanners = [
+    {
+        id: 'starter_pack',
+        name: 'Kanto Starter Pack',
+        description: 'A special pack containing Pokémon from the Kanto region. A great start for any trainer!',
+        image: 'https://placehold.co/800x450/2E3A4D/EFFFFA?text=Kanto+Starters',
+        requiredItemId: 'kanto_pack_ticket'
+    },
+    {
+        id: 'legendary_pack',
+        name: 'Legendary Beasts',
+        description: 'A rare pack with a chance to contain a legendary Pokémon from the Johto region.',
+        image: 'https://placehold.co/800x450/D4AF37/000000?text=Legendary+Beasts',
+        requiredItemId: 'legendary_pack_ticket'
+    }
+];
+
+// Define what can be obtained from each pack
+const packRewards = {
+    starter_pack: [
+        { name: 'Bulbasaur', rarity: 'common' },
+        { name: 'Charmander', rarity: 'common' },
+        { name: 'Squirtle', rarity: 'common' },
+    ],
+    legendary_pack: [
+        { name: 'Raikou', rarity: 'legendary' },
+        { name: 'Entei', rarity: 'legendary' },
+        { name: 'Suicune', rarity: 'legendary' },
+    ]
+};
+
+// API route to get the list of available banners
+app.get('/api/gacha/banners', (req, res) => {
+    res.json({ success: true, banners: gachaBanners });
+});
+
+// API route to open a pack
+app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
+    try {
+        const { bannerId } = req.body;
+        const userId = req.auth.user.id;
+
+        const banner = gachaBanners.find(b => b.id === bannerId);
+        if (!banner) {
+            return res.status(404).json({ success: false, error: 'Banner not found.' });
+        }
+
+        const user = await User.findById(userId);
+        const inventoryItem = user.inventory.find(item => item.itemId === banner.requiredItemId);
+
+        if (!inventoryItem || inventoryItem.quantity < 1) {
+            return res.status(400).json({ success: false, error: 'You do not have the required pack.' });
+        }
+
+        // Decrement the item quantity
+        inventoryItem.quantity -= 1;
+        // If quantity is zero, remove the item from inventory (optional, but good practice)
+        if (inventoryItem.quantity === 0) {
+            user.inventory = user.inventory.filter(item => item.itemId !== banner.requiredItemId);
+        }
+        await user.save();
+
+        // Determine the reward
+        const possibleRewards = packRewards[banner.id];
+        const reward = possibleRewards[Math.floor(Math.random() * possibleRewards.length)];
+
+        res.json({ success: true, reward, newInventory: user.inventory });
+
+    } catch (error) {
+        console.error("Error opening pack:", error);
+        res.status(500).json({ success: false, error: 'Server error while opening pack.' });
+    }
+});
+
+// --- BINGO CARD SYSTEM LOGIC ---
 // Create or get a session for a card
 app.post('/api/session/init', optionalAuth, async (req, res) => { // Added optionalAuth
   try {
