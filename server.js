@@ -30,6 +30,20 @@ const authMiddleware = jwtAuth({
   }
 });
 
+// --- ADD NEW Admin-only Middleware (Place this near your authMiddleware) ---
+const adminMiddleware = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.auth.user.id);
+        if (user && user.isAdmin) {
+            next(); // User is an admin, proceed
+        } else {
+            res.status(403).json({ success: false, error: 'Forbidden: Admin access required.' });
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Server error during admin check.' });
+    }
+};
+
 // Enhanced CORS configuration for Railway
 app.use(cors({
   origin: [
@@ -302,6 +316,10 @@ const userSchema = new mongoose.Schema({
     itemName: { type: String, required: true },
     quantity: { type: Number, required: true, default: 1 }
   }],
+  isAdmin: {
+        type: Boolean,
+        default: false
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -319,6 +337,36 @@ userSchema.pre('save', async function(next) {
 });
 
 const User = mongoose.model('User', userSchema);
+
+// --- ADD NEW SCHEMA for Redeem Codes (Place this near your other schemas) ---
+const redeemCodeSchema = new mongoose.Schema({
+    code: {
+        type: String,
+        required: true,
+        unique: true,
+        uppercase: true,
+        trim: true
+    },
+    reward: {
+        itemId: { type: String, required: true },
+        itemName: { type: String, required: true },
+        quantity: { type: Number, required: true, default: 1 }
+    },
+    useType: {
+        type: String,
+        enum: ['one-time', 'infinite'],
+        default: 'one-time'
+    },
+    usersWhoRedeemed: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    createdAt: {
+        type: Date,
+        default: Date.now
+    }
+});
+const RedeemCode = mongoose.model('RedeemCode', redeemCodeSchema);
 
 // Helper function to generate unique session IDs (using uuid)
 async function generateUniqueSessionId() {
@@ -361,6 +409,8 @@ function generateUniqueCode() {
 
 // --- ADD NEW AUTHENTICATION API ROUTES ---
 const authRouter = express.Router();
+// --- ADD NEW ADMIN ROUTES (Place these at the end of your API routes) ---
+const adminRouter = express.Router();
 
 // SIGNUP
 authRouter.post('/signup', async (req, res) => {
@@ -538,6 +588,79 @@ app.post('/api/auth/discord/unlink', authMiddleware, async (req, res) => {
     } catch (error) {
         console.error("Error unlinking discord account:", error);
         res.status(500).json({ success: false, error: 'Server error while unlinking account.' });
+    }
+});
+
+// Generate a new redeem code
+adminRouter.post('/generate-code', async (req, res) => {
+    const { code, reward, useType } = req.body;
+    if (!code || !reward || !useType) {
+        return res.status(400).json({ success: false, error: 'Missing required fields.' });
+    }
+    try {
+        const newCode = new RedeemCode({ code, reward, useType });
+        await newCode.save();
+        res.status(201).json({ success: true, message: 'Code generated successfully.', code: newCode });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Could not generate code.', details: error.message });
+    }
+});
+
+// Get all existing codes
+adminRouter.get('/codes', async (req, res) => {
+    try {
+        const codes = await RedeemCode.find().sort({ createdAt: -1 });
+        res.json({ success: true, codes });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Could not fetch codes.' });
+    }
+});
+
+// Mount the admin router with double protection
+app.use('/api/admin', authMiddleware, adminMiddleware, adminRouter);
+
+
+// --- ADD NEW Redeem Code Route (Place this near other public API routes) ---
+app.post('/api/redeem', authMiddleware, async (req, res) => {
+    const { code } = req.body;
+    const userId = req.auth.user.id;
+
+    if (!code) {
+        return res.status(400).json({ success: false, error: 'Please enter a code.' });
+    }
+
+    try {
+        const redeemCode = await RedeemCode.findOne({ code: code.toUpperCase() });
+
+        if (!redeemCode) {
+            return res.status(404).json({ success: false, error: 'Invalid code.' });
+        }
+
+        // Check if user has already redeemed a one-time code
+        if (redeemCode.useType === 'one-time' && redeemCode.usersWhoRedeemed.includes(userId)) {
+            return res.status(403).json({ success: false, error: 'You have already redeemed this code.' });
+        }
+
+        const user = await User.findById(userId);
+        const itemInInventory = user.inventory.find(item => item.itemId === redeemCode.reward.itemId);
+
+        if (itemInInventory) {
+            itemInInventory.quantity += redeemCode.reward.quantity;
+        } else {
+            user.inventory.push(redeemCode.reward);
+        }
+
+        if (redeemCode.useType === 'one-time') {
+            redeemCode.usersWhoRedeemed.push(userId);
+            await redeemCode.save();
+        }
+
+        await user.save();
+        res.json({ success: true, message: `Successfully redeemed! You received: ${redeemCode.reward.quantity}x ${redeemCode.reward.itemName}` });
+
+    } catch (error) {
+        console.error("Redeem Error:", error);
+        res.status(500).json({ success: false, error: 'An error occurred during redemption.' });
     }
 });
 
