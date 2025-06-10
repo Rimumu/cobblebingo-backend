@@ -11,6 +11,14 @@ const { URLSearchParams } = require('url');
 const app = express();
 const PORT = process.env.PORT || 8000;
 
+// --- 1. ADD a master list of rewardable items. Place this near the top with other definitions. ---
+const rewardableItems = [
+    { itemId: 'kanto_pack_ticket', itemName: 'Kanto Starter Pack Ticket' },
+    { itemId: 'legendary_pack_ticket', itemName: 'Legendary Beasts Pack Ticket' },
+    { itemId: 'shiny_charm_fragment', itemName: 'Shiny Charm Fragment' },
+    // Add any other items you want to be able to generate codes for here
+];
+
 // --- ADD JWT Middleware for protected routes ---
 const authMiddleware = jwtAuth({
   secret: process.env.JWT_SECRET || 'your_default_jwt_secret',
@@ -589,6 +597,11 @@ app.post('/api/auth/discord/unlink', authMiddleware, async (req, res) => {
         console.error("Error unlinking discord account:", error);
         res.status(500).json({ success: false, error: 'Server error while unlinking account.' });
     }
+});
+
+// NEW Route to get the list of possible reward items
+adminRouter.get('/reward-items', (req, res) => {
+    res.json({ success: true, items: rewardableItems });
 });
 
 // Generate a new redeem code
