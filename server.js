@@ -491,12 +491,11 @@ app.get('/api/auth/discord/callback', async (req, res) => {
         }
 
         user.discordId = discordUser.id;
-        user.discordUsername = `${discordUser.username}#${discordUser.discriminator}`;
+        // --- THIS IS THE CORRECTED LINE ---
+        user.discordUsername = discordUser.username; // No more hashtag and discriminator
         await user.save();
 
-        // --- THIS IS THE CORRECTED PART ---
-        // Redirect the user back to the FRONTEND bingo page with a success message.
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5500'; // Fallback for local testing
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5500';
         res.redirect(`${frontendUrl}/bingo/?discord_linked=true`);
 
     } catch (error) {
