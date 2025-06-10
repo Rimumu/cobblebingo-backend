@@ -297,6 +297,11 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  inventory: [{
+    itemId: { type: String, required: true },
+    itemName: { type: String, required: true },
+    quantity: { type: Number, required: true, default: 1 }
+  }],
   createdAt: {
     type: Date,
     default: Date.now
