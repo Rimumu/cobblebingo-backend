@@ -706,17 +706,17 @@ const gachaBanners = [
 
 // Define what can be obtained from each pack
 const packContents = {
-    lamb_chop_pack: [ // Changed ID
-        { name: 'Miltank', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/miltank.jpg', weight: 30 },
-        { name: 'Tauros', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/tauros.jpg', weight: 30 },
-        { name: 'Wooloo', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/wooloo.jpg', weight: 30 },
-        { name: 'Lechonk', rarity: 'rare', image: 'https://img.pokemondb.net/artwork/large/lechonk.jpg', weight: 10 },
+    lamb_chop_pack: [
+        { itemId: 'pokemon_miltank', itemName: 'Miltank', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/miltank.jpg', weight: 30 },
+        { itemId: 'pokemon_tauros', itemName: 'Tauros', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/tauros.jpg', weight: 30 },
+        { itemId: 'pokemon_wooloo', itemName: 'Wooloo', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/wooloo.jpg', weight: 30 },
+        { itemId: 'pokemon_lechonk', itemName: 'Lechonk', rarity: 'rare', image: 'https://img.pokemondb.net/artwork/large/lechonk.jpg', weight: 10 },
     ],
-    a5_wagyu_pack: [ // Changed ID
-        { name: 'Spoink', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/spoink.jpg', weight: 40 },
-        { name: 'Tepig', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/tepig.jpg', weight: 40 },
-        { name: 'Kyogre', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/kyogre.jpg', weight: 5 },
-        { name: 'Groudon', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/groudon.jpg', weight: 5 },
+    a5_wagyu_pack: [
+        { itemId: 'pokemon_spoink', itemName: 'Spoink', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/spoink.jpg', weight: 40 },
+        { itemId: 'pokemon_tepig', itemName: 'Tepig', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/tepig.jpg', weight: 40 },
+        { itemId: 'pokemon_kyogre', itemName: 'Kyogre', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/kyogre.jpg', weight: 5 },
+        { itemId: 'pokemon_groudon', itemName: 'Groudon', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/groudon.jpg', weight: 5 },
     ]
 };
 
@@ -757,12 +757,13 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
             return res.status(400).json({ success: false, error: 'You do not have the required pack.' });
         }
 
+        // 1. Deduct the knife/ticket
         inventoryItem.quantity -= 1;
         if (inventoryItem.quantity === 0) {
             user.inventory = user.inventory.filter(item => item.itemId !== banner.requiredItemId);
         }
-        await user.save();
 
+        // 2. Determine the reward using the weighted system
         const possibleRewards = packContents[banner.id];
         const totalWeight = possibleRewards.reduce((sum, item) => sum + item.weight, 0);
         let randomNum = Math.random() * totalWeight;
@@ -775,12 +776,35 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
             randomNum -= item.weight;
         }
         if (!reward) {
-            reward = possibleRewards[0];
+            reward = possibleRewards[0]; // Fallback reward
         }
+        
+        // --- 3. GENERIC REWARD LOGIC ---
+        // We now use the predefined itemId from the reward object.
+        const rewardInInventory = user.inventory.find(item => item.itemId === reward.itemId);
+
+        if (rewardInInventory) {
+            // If user already has this item, increment the quantity
+            rewardInInventory.quantity += 1;
+        } else {
+            // Otherwise, add it as a new item using its predefined details
+            user.inventory.push({
+                itemId: reward.itemId,
+                itemName: reward.itemName,
+                quantity: 1
+            });
+        }
+        // --- END OF GENERIC LOGIC ---
+
+        // 4. Save the user document with all changes
+        await user.save();
 
         const animationReel = generateAnimationReel(banner.id, reward);
 
-        res.json({ success: true, reward, newInventory: user.inventory, animationReel });
+        // We rename the reward's 'itemName' to 'name' for frontend consistency
+        const rewardForFrontend = { ...reward, name: reward.itemName };
+
+        res.json({ success: true, reward: rewardForFrontend, newInventory: user.inventory, animationReel });
 
     } catch (error) {
         console.error("Error opening pack:", error);
