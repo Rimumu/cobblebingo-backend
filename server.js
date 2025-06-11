@@ -13,10 +13,9 @@ const PORT = process.env.PORT || 8000;
 
 // --- 1. ADD a master list of rewardable items. Place this near the top with other definitions. ---
 const rewardableItems = [
-    { itemId: 'lamb_chop_ticket', itemName: 'Lamb Chop Pack Ticket' },
-    { itemId: 'a5_wagyu_ticket', itemName: 'A5 Wagyu Pack Ticket' },
+    { itemId: 'kitchen_knife', itemName: 'Kitchen Knife' }, // CHANGED
+    { itemId: 'chef_knife', itemName: 'Chef Knife' },       // CHANGED
     { itemId: 'shiny_charm_fragment', itemName: 'Shiny Charm Fragment' },
-    // Add any other items you want to be able to generate codes for here
 ];
 
 // --- ADD JWT Middleware for protected routes ---
@@ -682,18 +681,18 @@ app.post('/api/redeem', authMiddleware, async (req, res) => {
 // Define the available banners on the server
 const gachaBanners = [
     {
-        id: 'lamb_chop_pack', // Changed ID
-        name: 'Lamb Chop Pack', // Changed Name
+        id: 'lamb_chop_pack',
+        name: 'Lamb Chop Pack',
         description: 'A hearty pack with a chance to contain delicious and common Pokémon.',
-        image: 'https://placehold.co/800x450/CD7F32/FFFFFF?text=Lamb+Chop+Pack', // New Bronze-themed image
-        requiredItemId: 'lamb_chop_ticket'
+        image: 'https://placehold.co/800x450/CD7F32/FFFFFF?text=Lamb+Chop+Pack',
+        requiredItemId: 'kitchen_knife' // CHANGED
     },
     {
-        id: 'a5_wagyu_pack', // Changed ID
-        name: 'A5 Wagyu Pack', // Changed Name
+        id: 'a5_wagyu_pack',
+        name: 'A5 Wagyu Pack',
         description: 'An exquisite and rare pack with a chance to contain the most legendary and flavorful Pokémon.',
-        image: 'https://placehold.co/800x450/B40431/FFFFFF?text=A5+Wagyu+Pack', // New Wagyu-themed image
-        requiredItemId: 'a5_wagyu_ticket'
+        image: 'https://placehold.co/800x450/B40431/FFFFFF?text=A5+Wagyu+Pack',
+        requiredItemId: 'chef_knife' // CHANGED
     }
 ];
 
