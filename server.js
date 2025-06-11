@@ -805,6 +805,8 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
         const rewardInInventory = user.inventory.find(item => item.itemId === reward.itemId);
         if (rewardInInventory) {
             rewardInInventory.quantity += 1;
+            // Ensure the image is correct, in case it was missing from an old DB entry
+            rewardInInventory.image = reward.image;
         } else {
             user.inventory.push({
                 itemId: reward.itemId,
