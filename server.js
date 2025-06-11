@@ -393,6 +393,18 @@ const packContents = {
     ]
 };
 
+// --- NEW: Pre-process packContents to use Cobbledex URLs ---
+for (const packId in packContents) {
+    packContents[packId].forEach(item => {
+        // Check if it's a Pokemon item before changing the URL
+        if (item.itemId.startsWith('pokemon_')) {
+            const formattedName = item.itemName.toLowerCase().replace(/\s+/g, "_");
+            item.image = `https://cobbledex.b-cdn.net/mons/large/${formattedName}.webp`;
+        }
+    });
+}
+
+
 // --- Create a single source of truth for all item details ---
 const allItemsMap = new Map();
 // Add items from rewardableItems
