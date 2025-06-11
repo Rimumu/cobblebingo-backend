@@ -322,7 +322,8 @@ const userSchema = new mongoose.Schema({
     itemId: { type: String, required: true },
     itemName: { type: String, required: true },
     quantity: { type: Number, required: true, default: 1 },
-    image: { type: String, default: null }
+    image: { type: String, default: null },
+    id: { type: String, default: null } // For Pokemon ID
   }],
   isAdmin: {
         type: Boolean,
@@ -380,16 +381,16 @@ const RedeemCode = mongoose.model('RedeemCode', redeemCodeSchema);
 // Define what can be obtained from each pack
 const packContents = {
     lamb_chop_pack: [
-        { itemId: 'pokemon_miltank', itemName: 'Miltank', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/miltank.jpg', weight: 30 },
-        { itemId: 'pokemon_tauros', itemName: 'Tauros', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/tauros.jpg', weight: 30 },
-        { itemId: 'pokemon_wooloo', itemName: 'Wooloo', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/wooloo.jpg', weight: 30 },
-        { itemId: 'pokemon_lechonk', itemName: 'Lechonk', rarity: 'rare', image: 'https://img.pokemondb.net/artwork/large/lechonk.jpg', weight: 10 },
+        { itemId: 'pokemon_miltank', itemName: 'Miltank', id: '241', rarity: 'common', image: '', weight: 30 },
+        { itemId: 'pokemon_tauros', itemName: 'Tauros', id: '128', rarity: 'common', image: '', weight: 30 },
+        { itemId: 'pokemon_wooloo', itemName: 'Wooloo', id: '831', rarity: 'common', image: '', weight: 30 },
+        { itemId: 'pokemon_lechonk', itemName: 'Lechonk', id: '915', rarity: 'rare', image: '', weight: 10 },
     ],
     a5_wagyu_pack: [
-        { itemId: 'pokemon_spoink', itemName: 'Spoink', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/spoink.jpg', weight: 40 },
-        { itemId: 'pokemon_tepig', itemName: 'Tepig', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/tepig.jpg', weight: 40 },
-        { itemId: 'pokemon_kyogre', itemName: 'Kyogre', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/kyogre.jpg', weight: 5 },
-        { itemId: 'pokemon_groudon', itemName: 'Groudon', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/groudon.jpg', weight: 5 },
+        { itemId: 'pokemon_spoink', itemName: 'Spoink', id: '325', rarity: 'common', image: '', weight: 40 },
+        { itemId: 'pokemon_tepig', itemName: 'Tepig', id: '498', rarity: 'common', image: '', weight: 40 },
+        { itemId: 'pokemon_kyogre', itemName: 'Kyogre', id: '382', rarity: 'legendary', image: '', weight: 5 },
+        { itemId: 'pokemon_groudon', itemName: 'Groudon', id: '383', rarity: 'legendary', image: '', weight: 5 },
     ]
 };
 
@@ -845,13 +846,15 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
             rewardInInventory.quantity += 1;
             // Ensure the image is correct, in case it was missing from an old DB entry
             rewardInInventory.image = reward.image;
+            rewardInInventory.id = reward.id;
         } else {
             user.inventory.push({
                 itemId: reward.itemId,
                 itemName: reward.itemName,
                 quantity: 1,
                 // We add the image here so the inventory has it
-                image: reward.image 
+                image: reward.image,
+                id: reward.id
             });
         }
         
