@@ -757,13 +757,11 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
             return res.status(400).json({ success: false, error: 'You do not have the required pack.' });
         }
 
-        // 1. Deduct the knife/ticket
         inventoryItem.quantity -= 1;
         if (inventoryItem.quantity === 0) {
             user.inventory = user.inventory.filter(item => item.itemId !== banner.requiredItemId);
         }
 
-        // 2. Determine the reward using the weighted system
         const possibleRewards = packContents[banner.id];
         const totalWeight = possibleRewards.reduce((sum, item) => sum + item.weight, 0);
         let randomNum = Math.random() * totalWeight;
@@ -776,35 +774,32 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
             randomNum -= item.weight;
         }
         if (!reward) {
-            reward = possibleRewards[0]; // Fallback reward
+            reward = possibleRewards[0];
         }
         
-        // --- 3. GENERIC REWARD LOGIC ---
-        // We now use the predefined itemId from the reward object.
         const rewardInInventory = user.inventory.find(item => item.itemId === reward.itemId);
-
         if (rewardInInventory) {
-            // If user already has this item, increment the quantity
             rewardInInventory.quantity += 1;
         } else {
-            // Otherwise, add it as a new item using its predefined details
             user.inventory.push({
                 itemId: reward.itemId,
                 itemName: reward.itemName,
-                quantity: 1
+                quantity: 1,
+                // We add the image here so the inventory has it
+                image: reward.image 
             });
         }
-        // --- END OF GENERIC LOGIC ---
-
-        // 4. Save the user document with all changes
+        
         await user.save();
 
-        const animationReel = generateAnimationReel(banner.id, reward);
+        const animationReelFromServer = generateAnimationReel(banner.id, reward);
 
-        // We rename the reward's 'itemName' to 'name' for frontend consistency
+        // --- THIS IS THE FIX for "undefined" names ---
+        // The server will now ensure the data format is exactly what the frontend needs.
         const rewardForFrontend = { ...reward, name: reward.itemName };
-
-        res.json({ success: true, reward: rewardForFrontend, newInventory: user.inventory, animationReel });
+        const animationReelForFrontend = animationReelFromServer.map(item => ({...item, name: item.itemName}));
+        
+        res.json({ success: true, reward: rewardForFrontend, newInventory: user.inventory, animationReel: animationReelForFrontend });
 
     } catch (error) {
         console.error("Error opening pack:", error);
