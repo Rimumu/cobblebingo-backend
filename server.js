@@ -321,7 +321,8 @@ const userSchema = new mongoose.Schema({
   inventory: [{
     itemId: { type: String, required: true },
     itemName: { type: String, required: true },
-    quantity: { type: Number, required: true, default: 1 }
+    quantity: { type: Number, required: true, default: 1 },
+    image: { type: String, default: null }
   }],
   isAdmin: {
         type: Boolean,
