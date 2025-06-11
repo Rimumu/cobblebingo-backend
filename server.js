@@ -13,11 +13,11 @@ const PORT = process.env.PORT || 8000;
 
 // --- 1. ADD a master list of rewardable items. Place this near the top with other definitions. ---
 const rewardableItems = [
-    { itemId: 'kitchen_knife', itemName: 'Kitchen Knife' }, // CHANGED
-    { itemId: 'chef_knife', itemName: 'Chef Knife' },       // CHANGED
-    { itemId: 'shiny_charm_fragment', itemName: 'Shiny Charm Fragment' },
+    { itemId: 'kitchen_knife', itemName: 'Kitchen Knife', image: 'https://static.thenounproject.com/png/3944459-200.png' },
+    { itemId: 'chef_knife', itemName: 'Chef Knife', image: 'https://static.thenounproject.com/png/4023414-200.png' },
+    { itemId: 'shiny_charm_fragment', itemName: 'Shiny Charm Fragment', image: 'https://placehold.co/100x100/A365F4/FFF?text=Charm' },
+    // You can add any future items here
 ];
-
 // --- ADD JWT Middleware for protected routes ---
 const authMiddleware = jwtAuth({
   secret: process.env.JWT_SECRET || 'your_default_jwt_secret',
@@ -357,7 +357,8 @@ const redeemCodeSchema = new mongoose.Schema({
     reward: {
         itemId: { type: String, required: true },
         itemName: { type: String, required: true },
-        quantity: { type: Number, required: true, default: 1 }
+        quantity: { type: Number, required: true, default: 1 },
+        image: { type: String, required: true } // Add the image field
     },
     useType: {
         type: String,
@@ -605,12 +606,28 @@ adminRouter.get('/reward-items', (req, res) => {
 
 // Generate a new redeem code
 adminRouter.post('/generate-code', async (req, res) => {
-    const { code, reward, useType } = req.body;
-    if (!code || !reward || !useType) {
+    // The form now only sends itemId, quantity, etc.
+    const { code, itemId, quantity, useType } = req.body;
+    if (!code || !itemId || !quantity || !useType) {
         return res.status(400).json({ success: false, error: 'Missing required fields.' });
     }
     try {
-        const newCode = new RedeemCode({ code, reward, useType });
+        // Find the full item details from our master list
+        const itemDetails = rewardableItems.find(item => item.itemId === itemId);
+        if (!itemDetails) {
+            return res.status(404).json({ success: false, error: 'Invalid reward item ID selected.' });
+        }
+
+        const newCode = new RedeemCode({
+            code,
+            reward: {
+                itemId: itemDetails.itemId,
+                itemName: itemDetails.itemName,
+                image: itemDetails.image, // Get the image from our master list
+                quantity: quantity
+            },
+            useType
+        });
         await newCode.save();
         res.status(201).json({ success: true, message: 'Code generated successfully.', code: newCode });
     } catch (error) {
@@ -648,17 +665,12 @@ app.post('/api/redeem', authMiddleware, async (req, res) => {
             return res.status(404).json({ success: false, error: 'Invalid code.' });
         }
 
-        // --- New Redemption Logic ---
-        // Handle codes that can only be used once EVER
         if (redeemCode.useType === 'one-time' && redeemCode.usersWhoRedeemed.length > 0) {
             return res.status(403).json({ success: false, error: 'This code has already been redeemed.' });
         }
-
-        // Handle codes that can be used once PER USER
         if (redeemCode.useType === 'one-time-per-user' && redeemCode.usersWhoRedeemed.includes(userId)) {
             return res.status(403).json({ success: false, error: 'You have already redeemed this code.' });
         }
-        // --- End New Logic ---
 
         const user = await User.findById(userId);
         const itemInInventory = user.inventory.find(item => item.itemId === redeemCode.reward.itemId);
@@ -666,10 +678,10 @@ app.post('/api/redeem', authMiddleware, async (req, res) => {
         if (itemInInventory) {
             itemInInventory.quantity += redeemCode.reward.quantity;
         } else {
+            // Push the entire reward object (which now includes the image)
             user.inventory.push(redeemCode.reward);
         }
 
-        // Add user to the redeemed list if the code type requires tracking
         if (redeemCode.useType === 'one-time' || redeemCode.useType === 'one-time-per-user') {
             redeemCode.usersWhoRedeemed.push(userId);
             await redeemCode.save();
