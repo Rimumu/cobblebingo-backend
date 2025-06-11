@@ -15,7 +15,6 @@ const PORT = process.env.PORT || 8000;
 const rewardableItems = [
     { itemId: 'kitchen_knife', itemName: 'Kitchen Knife', image: 'https://static.thenounproject.com/png/3944459-200.png' },
     { itemId: 'chef_knife', itemName: 'Chef Knife', image: 'https://static.thenounproject.com/png/4023414-200.png' },
-    { itemId: 'shiny_charm_fragment', itemName: 'Shiny Charm Fragment', image: 'https://placehold.co/100x100/A365F4/FFF?text=Charm' },
     // You can add any future items here
 ];
 // --- ADD JWT Middleware for protected routes ---
@@ -732,10 +731,11 @@ app.post('/api/redeem', authMiddleware, async (req, res) => {
             return res.status(404).json({ success: false, error: 'Invalid code.' });
         }
 
+        // --- FIX 1: Correctly check if user has redeemed a 'one-time-per-user' code ---
         if (redeemCode.useType === 'one-time' && redeemCode.usersWhoRedeemed.length > 0) {
             return res.status(403).json({ success: false, error: 'This code has already been redeemed.' });
         }
-        if (redeemCode.useType === 'one-time-per-user' && redeemCode.usersWhoRedeemed.includes(userId)) {
+        if (redeemCode.useType === 'one-time-per-user' && redeemCode.usersWhoRedeemed.some(id => id.equals(userId))) {
             return res.status(403).json({ success: false, error: 'You have already redeemed this code.' });
         }
 
@@ -745,16 +745,14 @@ app.post('/api/redeem', authMiddleware, async (req, res) => {
         if (itemInInventory) {
             itemInInventory.quantity += redeemCode.reward.quantity;
         } else {
-            // Push the entire reward object (which now includes the image)
             user.inventory.push(redeemCode.reward);
         }
-
-        if (redeemCode.useType === 'one-time' || redeemCode.useType === 'one-time-per-user') {
-            redeemCode.usersWhoRedeemed.push(userId);
-            await redeemCode.save();
-        }
-
         await user.save();
+
+        // --- FIX 2: Always track the redemption to count infinite codes correctly ---
+        redeemCode.usersWhoRedeemed.push(userId);
+        await redeemCode.save();
+        
         res.json({ success: true, message: `Successfully redeemed! You received: ${redeemCode.reward.quantity}x ${redeemCode.reward.itemName}` });
 
     } catch (error) {
@@ -844,7 +842,7 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
         const rewardInInventory = user.inventory.find(item => item.itemId === reward.itemId);
         if (rewardInInventory) {
             rewardInInventory.quantity += 1;
-            // Ensure the image is correct, in case it was missing from an old DB entry
+            // Ensure the image and ID are correct, in case it was missing from an old DB entry
             rewardInInventory.image = reward.image;
             rewardInInventory.id = reward.id;
         } else {
@@ -852,7 +850,6 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
                 itemId: reward.itemId,
                 itemName: reward.itemName,
                 quantity: 1,
-                // We add the image here so the inventory has it
                 image: reward.image,
                 id: reward.id
             });
@@ -862,12 +859,9 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
 
         const animationReelFromServer = generateAnimationReel(banner.id, reward);
 
-        // --- THIS IS THE FIX for "undefined" names ---
-        // The server will now ensure the data format is exactly what the frontend needs.
         const rewardForFrontend = { ...reward, name: reward.itemName };
         const animationReelForFrontend = animationReelFromServer.map(item => ({...item, name: item.itemName}));
         
-        // Enrich the final inventory before sending it back
         const finalInventory = enrichInventory(user.inventory);
 
         res.json({ success: true, reward: rewardForFrontend, newInventory: finalInventory, animationReel: animationReelForFrontend });
