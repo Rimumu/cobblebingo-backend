@@ -570,10 +570,22 @@ app.get('/api/auth/discord/callback', async (req, res) => {
 
 app.get('/api/user/me', authMiddleware, async (req, res) => {
     try {
-        const user = await User.findById(req.auth.user.id).select('-password'); // Find user but exclude password
+        const user = await User.findById(req.auth.user.id).select('-password').lean();
         if (!user) {
             return res.status(404).json({ success: false, error: 'User not found.' });
         }
+
+        // Create a map of known item images for quick lookup
+        const itemImageMap = new Map(rewardableItems.map(item => [item.itemId, item.image]));
+
+        // Enrich inventory items with images if they are missing
+        user.inventory = user.inventory.map(invItem => {
+            if (!invItem.image && itemImageMap.has(invItem.itemId)) {
+                return { ...invItem, image: itemImageMap.get(invItem.itemId) };
+            }
+            return invItem;
+        });
+
         res.json({ success: true, user });
     } catch (error) {
         console.error("Error fetching user data:", error);
