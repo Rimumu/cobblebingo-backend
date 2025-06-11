@@ -361,7 +361,7 @@ const redeemCodeSchema = new mongoose.Schema({
     },
     useType: {
         type: String,
-        enum: ['one-time', 'infinite'],
+        enum: ['one-time', 'one-time-per-user', 'infinite'], 
         default: 'one-time'
     },
     usersWhoRedeemed: [{
@@ -648,10 +648,17 @@ app.post('/api/redeem', authMiddleware, async (req, res) => {
             return res.status(404).json({ success: false, error: 'Invalid code.' });
         }
 
-        // Check if user has already redeemed a one-time code
-        if (redeemCode.useType === 'one-time' && redeemCode.usersWhoRedeemed.includes(userId)) {
+        // --- New Redemption Logic ---
+        // Handle codes that can only be used once EVER
+        if (redeemCode.useType === 'one-time' && redeemCode.usersWhoRedeemed.length > 0) {
+            return res.status(403).json({ success: false, error: 'This code has already been redeemed.' });
+        }
+
+        // Handle codes that can be used once PER USER
+        if (redeemCode.useType === 'one-time-per-user' && redeemCode.usersWhoRedeemed.includes(userId)) {
             return res.status(403).json({ success: false, error: 'You have already redeemed this code.' });
         }
+        // --- End New Logic ---
 
         const user = await User.findById(userId);
         const itemInInventory = user.inventory.find(item => item.itemId === redeemCode.reward.itemId);
@@ -662,7 +669,8 @@ app.post('/api/redeem', authMiddleware, async (req, res) => {
             user.inventory.push(redeemCode.reward);
         }
 
-        if (redeemCode.useType === 'one-time') {
+        // Add user to the redeemed list if the code type requires tracking
+        if (redeemCode.useType === 'one-time' || redeemCode.useType === 'one-time-per-user') {
             redeemCode.usersWhoRedeemed.push(userId);
             await redeemCode.save();
         }
