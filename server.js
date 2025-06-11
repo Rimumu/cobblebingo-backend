@@ -8,8 +8,24 @@ const jwt = require('jsonwebtoken');
 const { expressjwt: jwtAuth } = require('express-jwt'); // Add this for JWT middleware
 const fetch = require('node-fetch'); // Or use another request library like axios
 const { URLSearchParams } = require('url');
+const fs = require('fs'); // Import the File System module
+const path = require('path'); // Import the Path module
 const app = express();
 const PORT = process.env.PORT || 8000;
+
+// --- Load Gacha Configuration from JSON file ---
+let packContents = {};
+try {
+    const gachaConfigPath = path.join(__dirname, 'gacha-config.json');
+    const gachaConfigFile = fs.readFileSync(gachaConfigPath, 'utf8');
+    packContents = JSON.parse(gachaConfigFile).packContents;
+    console.log('✅ Gacha configuration loaded successfully.');
+} catch (error) {
+    console.error('❌ Failed to load gacha-config.json:', error);
+    // Exit if the config is essential for the server to run
+    process.exit(1);
+}
+
 
 // --- 1. ADD a master list of rewardable items. Place this near the top with other definitions. ---
 const rewardableItems = [
@@ -377,27 +393,10 @@ const redeemCodeSchema = new mongoose.Schema({
 });
 const RedeemCode = mongoose.model('RedeemCode', redeemCodeSchema);
 
-// Define what can be obtained from each pack
-const packContents = {
-    lamb_chop_pack: [
-        { itemId: 'pokemon_miltank', itemName: 'Miltank', id: '241', rarity: 'common', image: '', weight: 30 },
-        { itemId: 'pokemon_tauros', itemName: 'Tauros', id: '128', rarity: 'common', image: '', weight: 30 },
-        { itemId: 'pokemon_wooloo', itemName: 'Wooloo', id: '831', rarity: 'common', image: '', weight: 30 },
-        { itemId: 'pokemon_lechonk', itemName: 'Lechonk', id: '915', rarity: 'rare', image: '', weight: 10 },
-    ],
-    a5_wagyu_pack: [
-        { itemId: 'pokemon_spoink', itemName: 'Spoink', id: '325', rarity: 'common', image: '', weight: 40 },
-        { itemId: 'pokemon_tepig', itemName: 'Tepig', id: '498', rarity: 'common', image: '', weight: 40 },
-        { itemId: 'pokemon_kyogre', itemName: 'Kyogre', id: '382', rarity: 'legendary', image: '', weight: 5 },
-        { itemId: 'pokemon_groudon', itemName: 'Groudon', id: '383', rarity: 'legendary', image: '', weight: 5 },
-    ]
-};
-
-// --- NEW: Pre-process packContents to use Cobbledex URLs ---
+// --- Pre-process packContents to generate Cobbledex URLs for Pokémon ---
 for (const packId in packContents) {
     packContents[packId].forEach(item => {
-        // Check if it's a Pokemon item before changing the URL
-        if (item.itemId.startsWith('pokemon_')) {
+        if (item.itemId.startsWith('pokemon_') && !item.image) {
             const formattedName = item.itemName.toLowerCase().replace(/\s+/g, "_");
             item.image = `https://cobbledex.b-cdn.net/mons/large/${formattedName}.webp`;
         }
