@@ -377,6 +377,55 @@ const redeemCodeSchema = new mongoose.Schema({
 });
 const RedeemCode = mongoose.model('RedeemCode', redeemCodeSchema);
 
+// Define what can be obtained from each pack
+const packContents = {
+    lamb_chop_pack: [
+        { itemId: 'pokemon_miltank', itemName: 'Miltank', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/miltank.jpg', weight: 30 },
+        { itemId: 'pokemon_tauros', itemName: 'Tauros', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/tauros.jpg', weight: 30 },
+        { itemId: 'pokemon_wooloo', itemName: 'Wooloo', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/wooloo.jpg', weight: 30 },
+        { itemId: 'pokemon_lechonk', itemName: 'Lechonk', rarity: 'rare', image: 'https://img.pokemondb.net/artwork/large/lechonk.jpg', weight: 10 },
+    ],
+    a5_wagyu_pack: [
+        { itemId: 'pokemon_spoink', itemName: 'Spoink', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/spoink.jpg', weight: 40 },
+        { itemId: 'pokemon_tepig', itemName: 'Tepig', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/tepig.jpg', weight: 40 },
+        { itemId: 'pokemon_kyogre', itemName: 'Kyogre', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/kyogre.jpg', weight: 5 },
+        { itemId: 'pokemon_groudon', itemName: 'Groudon', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/groudon.jpg', weight: 5 },
+    ]
+};
+
+// --- Create a single source of truth for all item details ---
+const allItemsMap = new Map();
+// Add items from rewardableItems
+rewardableItems.forEach(item => allItemsMap.set(item.itemId, item));
+// Add items from packContents, without overwriting
+Object.values(packContents).flat().forEach(item => {
+    if (!allItemsMap.has(item.itemId)) {
+        allItemsMap.set(item.itemId, item);
+    }
+});
+
+// --- Create a reusable enrichment function ---
+function enrichInventory(inventory) {
+    if (!inventory || !Array.isArray(inventory)) return [];
+    return inventory.map(invItem => {
+        // Mongoose subdocuments need to be converted to plain objects to be modified
+        const enrichedItem = invItem.toObject ? invItem.toObject() : { ...invItem };
+        
+        if (!enrichedItem.image) {
+            const details = allItemsMap.get(enrichedItem.itemId);
+            if (details) {
+                enrichedItem.image = details.image;
+            }
+        }
+        // Ensure image is at least an empty string to prevent .includes error on null
+        if (enrichedItem.image === null || enrichedItem.image === undefined) {
+             enrichedItem.image = '';
+        }
+        return enrichedItem;
+    });
+}
+
+
 // Helper function to generate unique session IDs (using uuid)
 async function generateUniqueSessionId() {
   let sessionId;
@@ -575,16 +624,8 @@ app.get('/api/user/me', authMiddleware, async (req, res) => {
             return res.status(404).json({ success: false, error: 'User not found.' });
         }
 
-        // Create a map of known item images for quick lookup
-        const itemImageMap = new Map(rewardableItems.map(item => [item.itemId, item.image]));
-
-        // Enrich inventory items with images if they are missing
-        user.inventory = user.inventory.map(invItem => {
-            if (!invItem.image && itemImageMap.has(invItem.itemId)) {
-                return { ...invItem, image: itemImageMap.get(invItem.itemId) };
-            }
-            return invItem;
-        });
+        // Apply the enrichment function to the user's inventory
+        user.inventory = enrichInventory(user.inventory);
 
         res.json({ success: true, user });
     } catch (error) {
@@ -729,21 +770,6 @@ const gachaBanners = [
     }
 ];
 
-// Define what can be obtained from each pack
-const packContents = {
-    lamb_chop_pack: [
-        { itemId: 'pokemon_miltank', itemName: 'Miltank', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/miltank.jpg', weight: 30 },
-        { itemId: 'pokemon_tauros', itemName: 'Tauros', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/tauros.jpg', weight: 30 },
-        { itemId: 'pokemon_wooloo', itemName: 'Wooloo', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/wooloo.jpg', weight: 30 },
-        { itemId: 'pokemon_lechonk', itemName: 'Lechonk', rarity: 'rare', image: 'https://img.pokemondb.net/artwork/large/lechonk.jpg', weight: 10 },
-    ],
-    a5_wagyu_pack: [
-        { itemId: 'pokemon_spoink', itemName: 'Spoink', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/spoink.jpg', weight: 40 },
-        { itemId: 'pokemon_tepig', itemName: 'Tepig', rarity: 'common', image: 'https://img.pokemondb.net/artwork/large/tepig.jpg', weight: 40 },
-        { itemId: 'pokemon_kyogre', itemName: 'Kyogre', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/kyogre.jpg', weight: 5 },
-        { itemId: 'pokemon_groudon', itemName: 'Groudon', rarity: 'legendary', image: 'https://img.pokemondb.net/artwork/large/groudon.jpg', weight: 5 },
-    ]
-};
 
 // --- NEW Helper function to generate the full animation reel ---
 function generateAnimationReel(packId, winningItem) {
@@ -826,7 +852,10 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
         const rewardForFrontend = { ...reward, name: reward.itemName };
         const animationReelForFrontend = animationReelFromServer.map(item => ({...item, name: item.itemName}));
         
-        res.json({ success: true, reward: rewardForFrontend, newInventory: user.inventory, animationReel: animationReelForFrontend });
+        // Enrich the final inventory before sending it back
+        const finalInventory = enrichInventory(user.inventory);
+
+        res.json({ success: true, reward: rewardForFrontend, newInventory: finalInventory, animationReel: animationReelForFrontend });
 
     } catch (error) {
         console.error("Error opening pack:", error);
