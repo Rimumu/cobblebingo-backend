@@ -1,32 +1,33 @@
 {
   "packContents": {
     "lamb_chop_pack": [
-      { "itemId": "pokemon_diglett", "itemName": "Diglett", "id": "50", "rarity": "common", "weight": 20 },
-      { "itemId": "pokemon_dugtrio", "itemName": "Dugtrio", "id": "51", "rarity": "common", "weight": 15 },
-      { "itemId": "pokemon_miltank", "itemName": "Miltank", "id": "241", "rarity": "common", "weight": 15 },
-      { "itemId": "pokemon_lickitung", "itemName": "Lickitung", "id": "108", "rarity": "uncommon", "weight": 10 },
-      { "itemId": "pokemon_lechonk", "itemName": "Lechonk", "id": "915", "rarity": "uncommon", "weight": 10 },
-      { "itemId": "pokemon_ditto", "itemName": "Ditto", "id": "132", "rarity": "rare", "weight": 5 },
-      { "itemId": "pokemon_snorlax", "itemName": "Snorlax", "id": "143", "rarity": "rare", "weight": 5 },
-      { "itemId": "item_great_ball", "itemName": "Great Ball", "id": null, "rarity": "rare", "weight": 10, "image": "https://placehold.co/100x100/4A90E2/FFFFFF?text=Great+Ball" },
-      { "itemId": "item_ultra_ball", "itemName": "Ultra Ball", "id": null, "rarity": "epic", "weight": 7, "image": "https://placehold.co/100x100/FFD700/000000?text=Ultra+Ball" },
-      { "itemId": "item_love_ball", "itemName": "Love Ball", "id": null, "rarity": "epic", "weight": 5, "image": "https://placehold.co/100x100/FFC0CB/000000?text=Love+Ball" },
-      { "itemId": "item_quick_ball", "itemName": "Quick Ball", "id": null, "rarity": "epic", "weight": 5, "image": "https://placehold.co/100x100/3498DB/FFFF00?text=Quick+Ball" },
-      { "itemId": "item_raw_mutton", "itemName": "Raw Mutton", "id": null, "rarity": "common", "weight": 25, "image": "https://placehold.co/100x100/E57373/FFFFFF?text=Mutton" },
-      { "itemId": "pokemon_arceus_shiny", "itemName": "Shiny Arceus", "id": "493", "rarity": "mythic", "weight": 1, "image": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/shiny/493.png" }
+      { "itemId": "pokemon_diglett", "itemName": "Diglett", "id": "50", "rarity": "common", "weight": 20, "command": "pokegive {player} diglett" },
+      { "itemId": "pokemon_dugtrio", "itemName": "Dugtrio", "id": "51", "rarity": "common", "weight": 15, "command": "pokegive {player} dugtrio" },
+      { "itemId": "pokemon_miltank", "itemName": "Miltank", "id": "241", "rarity": "common", "weight": 15, "command": "pokegive {player} miltank" },
+      { "itemId": "pokemon_lickitung", "itemName": "Lickitung", "id": "108", "rarity": "uncommon", "weight": 10, "command": "pokegive {player} lickitung" },
+      { "itemId": "pokemon_lechonk", "itemName": "Lechonk", "id": "915", "rarity": "uncommon", "weight": 10, "command": "pokegive {player} lechonk" },
+      { "itemId": "pokemon_ditto", "itemName": "Ditto", "id": "132", "rarity": "rare", "weight": 5, "command": "pokegive {player} ditto" },
+      { "itemId": "pokemon_snorlax", "itemName": "Snorlax", "id": "143", "rarity": "rare", "weight": 5, "command": "pokegive {player} snorlax" },
+      { "itemId": "pokemon_ducklett", "itemName": "Ducklett", "id": "580", "rarity": "common", "weight": 20, "command": "pokegive {player} ducklett" },
+      { "itemId": "item_great_ball", "itemName": "Great Ball", "id": null, "rarity": "uncommon", "weight": 10, "image": "https://placehold.co/100x100/4A90E2/FFFFFF?text=Great+Ball", "command": "give {player} cobblemon:great_ball 1" },
+      { "itemId": "item_ultra_ball", "itemName": "Ultra Ball", "id": null, "rarity": "rare", "weight": 7, "image": "https://placehold.co/100x100/FFD700/000000?text=Ultra+Ball", "command": "give {player} cobblemon:ultra_ball 1" },
+      { "itemId": "item_love_ball", "itemName": "Love Ball", "id": null, "rarity": "rare", "weight": 5, "image": "https://placehold.co/100x100/FFC0CB/000000?text=Love+Ball", "command": "give {player} cobblemon:love_ball 1" },
+      { "itemId": "item_quick_ball", "itemName": "Quick Ball", "id": null, "rarity": "rare", "weight": 5, "image": "https://placehold.co/100x100/3498DB/FFFF00?text=Quick+Ball", "command": "give {player} cobblemon:quick_ball 1" },
+      { "itemId": "item_raw_mutton", "itemName": "Raw Mutton", "id": null, "rarity": "common", "weight": 25, "image": "https://placehold.co/100x100/E57373/FFFFFF?text=Mutton", "command": "give {player} minecraft:mutton 1" },
+      { "itemId": "pokemon_arceus_shiny", "itemName": "Shiny Arceus", "id": "493", "rarity": "mythic", "weight": 1, "image": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/shiny/493.png", "command": "pokegive {player} arceus shiny" }
     ],
     "a5_wagyu_pack": [
-      { "itemId": "pokemon_mewtwo", "itemName": "Mewtwo", "id": "150", "rarity": "legendary", "weight": 5 },
-      { "itemId": "pokemon_arceus", "itemName": "Arceus", "id": "493", "rarity": "legendary", "weight": 3 },
-      { "itemId": "pokemon_eternatus", "itemName": "Eternatus", "id": "890", "rarity": "legendary", "weight": 3 },
-      { "itemId": "pokemon_rayquaza", "itemName": "Rayquaza", "id": "384", "rarity": "legendary", "weight": 4 },
-      { "itemId": "pokemon_xerneas", "itemName": "Xerneas", "id": "716", "rarity": "legendary", "weight": 4 },
-      { "itemId": "pokemon_shaymin", "itemName": "Shaymin", "id": "492", "rarity": "legendary", "weight": 5 },
-      { "itemId": "pokemon_mew_shiny", "itemName": "Shiny Mew", "id": "151", "rarity": "mythic", "weight": 1, "image": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/shiny/151.png" },
-      { "itemId": "item_master_ball", "itemName": "Master Ball", "id": null, "rarity": "legendary", "weight": 5, "image": "https://placehold.co/100x100/9B59B6/FFFFFF?text=Master+Ball" },
-      { "itemId": "item_beast_ball", "itemName": "Beast Ball", "id": null, "rarity": "epic", "weight": 8, "image": "https://placehold.co/100x100/3498DB/E74C3C?text=Beast+Ball" },
-      { "itemId": "item_exp_candy_xl_10", "itemName": "10x Exp. Candy XL", "id": null, "rarity": "rare", "weight": 15, "image": "https://placehold.co/100x100/F1C40F/000000?text=Candy+XL" },
-      { "itemId": "item_iv_upgrade", "itemName": "IV Upgrade", "id": null, "rarity": "mythic", "weight": 1, "image": "https://placehold.co/100x100/2ECC71/FFFFFF?text=IV+Up" }
+      { "itemId": "pokemon_mewtwo", "itemName": "Mewtwo", "id": "150", "rarity": "legendary", "weight": 5, "command": "pokegive {player} mewtwo" },
+      { "itemId": "pokemon_arceus", "itemName": "Arceus", "id": "493", "rarity": "legendary", "weight": 3, "command": "pokegive {player} arceus" },
+      { "itemId": "pokemon_eternatus", "itemName": "Eternatus", "id": "890", "rarity": "legendary", "weight": 3, "command": "pokegive {player} eternatus" },
+      { "itemId": "pokemon_rayquaza", "itemName": "Rayquaza", "id": "384", "rarity": "legendary", "weight": 4, "command": "pokegive {player} rayquaza" },
+      { "itemId": "pokemon_xerneas", "itemName": "Xerneas", "id": "716", "rarity": "legendary", "weight": 4, "command": "pokegive {player} xerneas" },
+      { "itemId": "pokemon_shaymin", "itemName": "Shaymin", "id": "492", "rarity": "legendary", "weight": 5, "command": "pokegive {player} shaymin" },
+      { "itemId": "pokemon_mew_shiny", "itemName": "Shiny Mew", "id": "151", "rarity": "mythic", "weight": 1, "image": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/shiny/151.png", "command": "pokegive {player} mew shiny" },
+      { "itemId": "item_master_ball", "itemName": "Master Ball", "id": null, "rarity": "epic", "weight": 10, "image": "https://placehold.co/100x100/9B59B6/FFFFFF?text=Master+Ball", "command": "give {player} cobblemon:master_ball 1" },
+      { "itemId": "item_beast_ball", "itemName": "Beast Ball", "id": null, "rarity": "epic", "weight": 8, "image": "https://placehold.co/100x100/3498DB/E74C3C?text=Beast+Ball", "command": "give {player} cobblemon:beast_ball 1" },
+      { "itemId": "item_exp_candy_xl_10", "itemName": "10x Exp. Candy XL", "id": null, "rarity": "rare", "weight": 15, "image": "https://placehold.co/100x100/F1C40F/000000?text=Candy+XL", "command": "give {player} cobblemon:exp_candy_xl 10" },
+      { "itemId": "item_iv_upgrade", "itemName": "IV Upgrade", "id": null, "rarity": "epic", "weight": 10, "image": "https://placehold.co/100x100/2ECC71/FFFFFF?text=IV+Up", "command": "say {player} used an IV Upgrade! (Admin must apply)" }
     ]
   }
 }
