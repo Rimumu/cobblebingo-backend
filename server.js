@@ -32,6 +32,7 @@ try {
 const rewardableItems = [
     { itemId: 'kitchen_knife', itemName: 'Kitchen Knife', image: 'https://static.thenounproject.com/png/3944459-200.png' },
     { itemId: 'chef_knife', itemName: 'Chef Knife', image: 'https://static.thenounproject.com/png/4023414-200.png' },
+    { itemId: 'shiny_charm_fragment', itemName: 'Shiny Charm Fragment', image: 'https://placehold.co/100x100/A365F4/FFF?text=Charm' },
     // You can add any future items here
 ];
 // --- ADD JWT Middleware for protected routes ---
@@ -796,7 +797,16 @@ app.post('/api/inventory/use', authMiddleware, async (req, res) => {
         console.log(`RCON command sent for ${user.username}: "${command}". Response: ${rconResponse}`);
         await rcon.end();
 
-        // Decrement item quantity and save user
+        // Check the RCON response before consuming the item
+        if (rconResponse.includes('No player was found')) {
+            return res.status(400).json({
+                success: false,
+                error: 'Player is not online.',
+                errorCode: 'PLAYER_OFFLINE'
+            });
+        }
+
+        // If command was successful, decrement item quantity and save user
         itemInInventory.quantity -= 1;
         if (itemInInventory.quantity <= 0) {
             user.inventory = user.inventory.filter(item => item.itemId !== itemId);
