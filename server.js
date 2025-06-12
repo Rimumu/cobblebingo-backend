@@ -67,6 +67,29 @@ const adminMiddleware = async (req, res, next) => {
     }
 };
 
+// --- START: New Helper Function to Send Discord Webhook ---
+// Place this function near the top with other helper functions.
+async function sendDiscordAnnouncement(payload) {
+    const webhookUrl = process.env.DISCORD_ANNOUNCEMENT_WEBHOOK_URL;
+    if (!webhookUrl) {
+        console.warn('⚠️ DISCORD_ANNOUNCEMENT_WEBHOOK_URL not set. Skipping announcement.');
+        return;
+    }
+
+    try {
+        await fetch(webhookUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        console.log(`📢 Sent Discord announcement for: ${payload.embeds[0].title}`);
+    } catch (error) {
+        console.error('❌ Failed to send Discord webhook announcement:', error);
+    }
+}
+// --- END: New Helper Function ---
+
+
 // Enhanced CORS configuration for Railway
 app.use(cors({
   origin: [
@@ -879,6 +902,72 @@ app.get('/api/gacha/banners', (req, res) => {
     res.json({ success: true, banners: gachaBanners });
 });
 
+// --- START: New Gacha Announcement Endpoint ---
+// This new endpoint is solely for sending the announcement.
+app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
+    try {
+        const { itemId } = req.body;
+        const userId = req.auth.user.id;
+
+        if (!itemId) {
+            return res.status(400).json({ success: false, error: 'itemId is required.' });
+        }
+
+        const user = await User.findById(userId);
+        const itemDetails = allItemsMap.get(itemId);
+
+        if (!user || !itemDetails) {
+            return res.status(404).json({ success: false, error: 'User or item not found.' });
+        }
+
+        // Define which rarities are worth announcing
+        const announcementRarities = ['rare', 'epic', 'legendary', 'mythic'];
+        if (!announcementRarities.includes(itemDetails.rarity)) {
+            return res.json({ success: true, message: 'Item rarity not eligible for announcement.' });
+        }
+        
+        // Define colors for each rarity
+        const rarityColors = {
+            rare: 3447003, // Blue
+            epic: 10181046, // Purple
+            legendary: 15844367, // Gold
+            mythic: 15158332, // Red
+        };
+
+        const embed = {
+            username: "Gacha Realm", // Webhook name
+            avatar_url: "https://i.imgur.com/pTcMJYJ.png", // Webhook avatar
+            content: `<@${user.discordId}>`, // This pings the user
+            embeds: [{
+                title: `A wild **${itemDetails.itemName}** appeared!`,
+                description: `**${user.username}** just pulled a **${itemDetails.rarity.toUpperCase()}** item!`,
+                color: rarityColors[itemDetails.rarity] || 0,
+                fields: [
+                    { name: "Item", value: itemDetails.itemName, inline: true },
+                    { name: "Rarity", value: itemDetails.rarity.charAt(0).toUpperCase() + itemDetails.rarity.slice(1), inline: true },
+                ],
+                thumbnail: {
+                    url: itemDetails.image,
+                },
+                timestamp: new Date().toISOString(),
+                footer: {
+                    text: "Cobblemon Gacha",
+                },
+            }, ],
+        };
+        
+        await sendDiscordAnnouncement(embed);
+
+        res.status(202).json({ success: true, message: 'Announcement request accepted.' });
+
+    } catch (error) {
+        console.error('❌ Error in /api/gacha/announce-pull:', error);
+        res.status(500).json({ success: false, error: 'Server error during announcement.' });
+    }
+});
+// --- END: New Gacha Announcement Endpoint ---
+
+
 app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
     try {
         const { bannerId } = req.body;
@@ -946,6 +1035,8 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
         const animationReelForFrontend = animationReelFromServer.map(item => ({...item, name: item.itemName}));
         const finalInventory = enrichInventory(user.inventory);
 
+        // Announce logic is now REMOVED from here.
+        
         res.json({ success: true, reward: rewardForFrontend, newInventory: finalInventory, animationReel: animationReelForFrontend });
 
     } catch (error) {
