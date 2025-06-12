@@ -10,6 +10,7 @@ const fetch = require('node-fetch'); // Or use another request library like axio
 const { URLSearchParams } = require('url');
 const fs = require('fs'); // Import the File System module
 const path = require('path'); // Import the Path module
+const { Rcon } = require('rcon-client'); // Import the RCON client
 const app = express();
 const PORT = process.env.PORT || 8000;
 
@@ -31,6 +32,7 @@ try {
 const rewardableItems = [
     { itemId: 'kitchen_knife', itemName: 'Kitchen Knife', image: 'https://static.thenounproject.com/png/3944459-200.png' },
     { itemId: 'chef_knife', itemName: 'Chef Knife', image: 'https://static.thenounproject.com/png/4023414-200.png' },
+    { itemId: 'shiny_charm_fragment', itemName: 'Shiny Charm Fragment', image: 'https://placehold.co/100x100/A365F4/FFF?text=Charm' },
     // You can add any future items here
 ];
 // --- ADD JWT Middleware for protected routes ---
@@ -759,6 +761,64 @@ app.post('/api/redeem', authMiddleware, async (req, res) => {
         res.status(500).json({ success: false, error: 'An error occurred during redemption.' });
     }
 });
+
+// --- NEW: API Endpoint to use an item from inventory ---
+app.post('/api/inventory/use', authMiddleware, async (req, res) => {
+    const { itemId } = req.body;
+    const userId = req.auth.user.id;
+
+    if (!itemId) {
+        return res.status(400).json({ success: false, error: 'itemId is required.' });
+    }
+
+    try {
+        const user = await User.findById(userId);
+        const itemInInventory = user.inventory.find(item => item.itemId === itemId);
+
+        if (!itemInInventory || itemInInventory.quantity <= 0) {
+            return res.status(404).json({ success: false, error: "Item not found in inventory or quantity is zero." });
+        }
+
+        const itemDetails = allItemsMap.get(itemId);
+        if (!itemDetails || !itemDetails.command) {
+            return res.status(400).json({ success: false, error: "This item is not usable." });
+        }
+
+        // Connect to RCON
+        const rcon = await Rcon.connect({
+            host: process.env.RCON_HOST,
+            port: process.env.RCON_PORT,
+            password: process.env.RCON_PASSWORD,
+        });
+
+        // Construct and send the command
+        const command = itemDetails.command.replace('{player}', user.username);
+        const rconResponse = await rcon.send(command);
+        console.log(`RCON command sent for ${user.username}: "${command}". Response: ${rconResponse}`);
+        await rcon.end();
+
+        // Decrement item quantity and save user
+        itemInInventory.quantity -= 1;
+        if (itemInInventory.quantity <= 0) {
+            user.inventory = user.inventory.filter(item => item.itemId !== itemId);
+        }
+        await user.save();
+        
+        // Send back the updated and enriched inventory
+        const finalInventory = enrichInventory(user.inventory);
+
+        res.json({
+            success: true,
+            message: `${itemDetails.itemName} has been redeemed in-game!`,
+            newInventory: finalInventory
+        });
+
+    } catch (error) {
+        console.error("Error using item:", error);
+        res.status(500).json({ success: false, error: 'Failed to use item. Check server connection and try again.' });
+    }
+});
+
 
 // --- GACHA SYSTEM LOGIC ---
 
