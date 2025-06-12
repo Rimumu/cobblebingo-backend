@@ -30,8 +30,8 @@ try {
 
 // --- 1. ADD a master list of rewardable items. Place this near the top with other definitions. ---
 const rewardableItems = [
-    { itemId: 'kitchen_knife', itemName: 'Kitchen Knife', image: '/kitchen_knife.png' },
-    { itemId: 'chef_knife', itemName: 'Chef Knife', image: '/chef_knife.png' },
+    { itemId: 'kitchen_knife', itemName: 'Kitchen Knife', image: 'https://i.imgur.com/2khorfF.png' },
+    { itemId: 'chef_knife', itemName: 'Chef Knife', image: 'https://i.imgur.com/HDRGq9Y.png' },
     // You can add any future items here
 ];
 // --- ADD JWT Middleware for protected routes ---
