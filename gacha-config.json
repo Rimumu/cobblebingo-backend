@@ -8,7 +8,6 @@
       { "itemId": "pokemon_lechonk", "itemName": "Lechonk", "id": "915", "rarity": "uncommon", "weight": 10 },
       { "itemId": "pokemon_ditto", "itemName": "Ditto", "id": "132", "rarity": "rare", "weight": 5 },
       { "itemId": "pokemon_snorlax", "itemName": "Snorlax", "id": "143", "rarity": "rare", "weight": 5 },
-      { "itemId": "pokemon_ducklett", "itemName": "Ducklett", "id": "580", "rarity": "common", "weight": 20 },
       { "itemId": "item_great_ball", "itemName": "Great Ball", "id": null, "rarity": "rare", "weight": 10, "image": "https://placehold.co/100x100/4A90E2/FFFFFF?text=Great+Ball" },
       { "itemId": "item_ultra_ball", "itemName": "Ultra Ball", "id": null, "rarity": "epic", "weight": 7, "image": "https://placehold.co/100x100/FFD700/000000?text=Ultra+Ball" },
       { "itemId": "item_love_ball", "itemName": "Love Ball", "id": null, "rarity": "epic", "weight": 5, "image": "https://placehold.co/100x100/FFC0CB/000000?text=Love+Ball" },
