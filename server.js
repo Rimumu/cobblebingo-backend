@@ -30,8 +30,8 @@ try {
 
 // --- 1. ADD a master list of rewardable items. Place this near the top with other definitions. ---
 const rewardableItems = [
-    { itemId: 'kitchen_knife', itemName: 'Kitchen Knife', image: 'https://i.imgur.com/2khorfF.png' },
-    { itemId: 'chef_knife', itemName: 'Chef Knife', image: 'https://i.imgur.com/HDRGq9Y.png' },
+    { itemId: 'kitchen_knife', itemName: 'Kitchen Knife', image: '/kitchen_knife.png' },
+    { itemId: 'chef_knife', itemName: 'Chef Knife', image: '/chef_knife.png' },
     // You can add any future items here
 ];
 // --- ADD JWT Middleware for protected routes ---
@@ -844,14 +844,14 @@ const gachaBanners = [
         name: 'Lamb Chop Pack',
         description: 'A hearty pack with a chance to contain delicious and common Pokémon.',
         image: 'https://placehold.co/800x450/CD7F32/FFFFFF?text=Lamb+Chop+Pack',
-        requiredItemId: 'kitchen_knife' // CHANGED
+        requiredItemId: 'kitchen_knife'
     },
     {
         id: 'a5_wagyu_pack',
         name: 'A5 Wagyu Pack',
         description: 'An exquisite and rare pack with a chance to contain the most legendary and flavorful Pokémon.',
         image: 'https://placehold.co/800x450/B40431/FFFFFF?text=A5+Wagyu+Pack',
-        requiredItemId: 'chef_knife' // CHANGED
+        requiredItemId: 'chef_knife'
     }
 ];
 
@@ -898,11 +898,22 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
             user.inventory = user.inventory.filter(item => item.itemId !== banner.requiredItemId);
         }
 
-        const possibleRewards = packContents[banner.id];
-        const totalWeight = possibleRewards.reduce((sum, item) => sum + item.weight, 0);
+        // --- NEW MYTHIC SELECTION LOGIC ---
+        let lootTable = packContents[banner.id];
+        const mythicItems = lootTable.filter(item => item.rarity === 'mythic');
+
+        if (mythicItems.length > 1) {
+            const nonMythicItems = lootTable.filter(item => item.rarity !== 'mythic');
+            const chosenMythic = mythicItems[Math.floor(Math.random() * mythicItems.length)];
+            lootTable = [...nonMythicItems, chosenMythic];
+            console.log(`Adjusted loot table for this opening. Chosen mythic: ${chosenMythic.itemName}`);
+        }
+        // --- END NEW LOGIC ---
+
+        const totalWeight = lootTable.reduce((sum, item) => sum + item.weight, 0);
         let randomNum = Math.random() * totalWeight;
         let reward;
-        for (const item of possibleRewards) {
+        for (const item of lootTable) {
             if (randomNum < item.weight) {
                 reward = item;
                 break;
@@ -910,13 +921,12 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
             randomNum -= item.weight;
         }
         if (!reward) {
-            reward = possibleRewards[0];
+            reward = lootTable[0]; // Fallback to the first item of the adjusted table
         }
         
         const rewardInInventory = user.inventory.find(item => item.itemId === reward.itemId);
         if (rewardInInventory) {
             rewardInInventory.quantity += 1;
-            // Ensure the image and ID are correct, in case it was missing from an old DB entry
             rewardInInventory.image = reward.image;
             rewardInInventory.id = reward.id;
         } else {
@@ -932,10 +942,8 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
         await user.save();
 
         const animationReelFromServer = generateAnimationReel(banner.id, reward);
-
         const rewardForFrontend = { ...reward, name: reward.itemName };
         const animationReelForFrontend = animationReelFromServer.map(item => ({...item, name: item.itemName}));
-        
         const finalInventory = enrichInventory(user.inventory);
 
         res.json({ success: true, reward: rewardForFrontend, newInventory: finalInventory, animationReel: animationReelForFrontend });
@@ -956,12 +964,10 @@ app.post('/api/session/init', optionalAuth, async (req, res) => { // Added optio
       return res.status(400).json({ success: false, error: 'cardCode is required.' });
     }
 
-    // Validate cardCode format (optional, but good practice)
     if (!/^CB[0-9A-HJ-NP-Z]{6}$/.test(cardCode.toUpperCase())) {
         return res.status(400).json({ success: false, error: 'Invalid cardCode format.' });
     }
 
-    // Check if the card itself exists
     const cardExists = await BingoCard.findOne({ code: cardCode.toUpperCase() }).lean();
     if (!cardExists) {
         return res.status(404).json({ success: false, error: 'Associated card not found.' });
@@ -971,7 +977,6 @@ app.post('/api/session/init', optionalAuth, async (req, res) => { // Added optio
     const newSession = new BingoSession({
       sessionId,
       cardCode: cardCode.toUpperCase(),
-        // If user is logged in (from optionalAuth), associate the session
       userId: req.auth ? req.auth.user.id : null
     });
     await newSession.save();
@@ -1003,7 +1008,6 @@ app.post('/api/generate-card', async (req, res) => {
   try {
     const { difficulty, pokemon } = req.body;
 
-    // Enhanced validation
     if (!pokemon || !Array.isArray(pokemon)) {
       return res.status(400).json({ 
         success: false,
@@ -1018,7 +1022,6 @@ app.post('/api/generate-card', async (req, res) => {
       });
     }
 
-    // Validate pokemon structure
     const invalidPokemon = pokemon.find(p => !p.name || typeof p.name !== 'string');
     if (invalidPokemon) {
       return res.status(400).json({ 
@@ -1027,7 +1030,6 @@ app.post('/api/generate-card', async (req, res) => {
       });
     }
 
-    // Generate unique code with better retry logic
     let code;
     let isUnique = false;
     let attempts = 0;
@@ -1055,7 +1057,6 @@ app.post('/api/generate-card', async (req, res) => {
       });
     }
 
-    // Create and save the card
     const bingoCard = new BingoCard({
       code,
       cardData: {
@@ -1070,14 +1071,13 @@ app.post('/api/generate-card', async (req, res) => {
     });
 
     await bingoCard.save();
-
     console.log(`✅ Generated new bingo card: ${code}`);
 
     res.json({
       success: true,
       code: code,
       message: 'Card generated successfully',
-      expiresAt: new Date(Date.now() + 2592000 * 1000) // 30 days from now
+      expiresAt: new Date(Date.now() + 2592000 * 1000)
     });
 
   } catch (error) {
