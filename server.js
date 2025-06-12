@@ -762,7 +762,7 @@ app.post('/api/redeem', authMiddleware, async (req, res) => {
     }
 });
 
-// --- NEW: API Endpoint to use an item from inventory ---
+// --- API Endpoint to use an item from inventory ---
 app.post('/api/inventory/use', authMiddleware, async (req, res) => {
     const { itemId } = req.body;
     const userId = req.auth.user.id;
@@ -771,6 +771,7 @@ app.post('/api/inventory/use', authMiddleware, async (req, res) => {
         return res.status(400).json({ success: false, error: 'itemId is required.' });
     }
 
+    let rcon;
     try {
         const user = await User.findById(userId);
         const itemInInventory = user.inventory.find(item => item.itemId === itemId);
@@ -785,26 +786,27 @@ app.post('/api/inventory/use', authMiddleware, async (req, res) => {
         }
 
         // Connect to RCON
-        const rcon = await Rcon.connect({
+        rcon = await Rcon.connect({
             host: process.env.RCON_HOST,
             port: process.env.RCON_PORT,
             password: process.env.RCON_PASSWORD,
         });
 
-        // Construct and send the command
-        const command = itemDetails.command.replace('{player}', user.username);
-        const rconResponse = await rcon.send(command);
-        console.log(`RCON command sent for ${user.username}: "${command}". Response: ${rconResponse}`);
-        await rcon.end();
-
-        // Check the RCON response before consuming the item
-        if (rconResponse.includes('No player was found')) {
+        // First, check if the player is online
+        const listResponse = await rcon.send('list');
+        if (!listResponse.includes(user.username)) {
+            // If player is not online, send specific error and do not consume the item
             return res.status(400).json({
                 success: false,
                 error: 'Player is not online.',
                 errorCode: 'PLAYER_OFFLINE'
             });
         }
+        
+        // If player is online, proceed to give the item
+        const command = itemDetails.command.replace('{player}', user.username);
+        await rcon.send(command);
+        console.log(`RCON command sent for ${user.username}: "${command}".`);
 
         // If command was successful, decrement item quantity and save user
         itemInInventory.quantity -= 1;
@@ -825,6 +827,11 @@ app.post('/api/inventory/use', authMiddleware, async (req, res) => {
     } catch (error) {
         console.error("Error using item:", error);
         res.status(500).json({ success: false, error: 'Failed to use item. Check server connection and try again.' });
+    } finally {
+        // Ensure the RCON connection is always closed
+        if (rcon) {
+            await rcon.end();
+        }
     }
 });
 
