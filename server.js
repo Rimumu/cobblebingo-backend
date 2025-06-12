@@ -30,9 +30,8 @@ try {
 
 // --- 1. ADD a master list of rewardable items. Place this near the top with other definitions. ---
 const rewardableItems = [
-    { itemId: 'kitchen_knife', itemName: 'Kitchen Knife', image: 'https://static.thenounproject.com/png/3944459-200.png' },
-    { itemId: 'chef_knife', itemName: 'Chef Knife', image: 'https://static.thenounproject.com/png/4023414-200.png' },
-    { itemId: 'shiny_charm_fragment', itemName: 'Shiny Charm Fragment', image: 'https://placehold.co/100x100/A365F4/FFF?text=Charm' },
+    { itemId: 'kitchen_knife', itemName: 'Kitchen Knife', image: 'https://i.imgur.com/2khorfF.png' },
+    { itemId: 'chef_knife', itemName: 'Chef Knife', image: 'https://i.imgur.com/HDRGq9Y.png' },
     // You can add any future items here
 ];
 // --- ADD JWT Middleware for protected routes ---
