@@ -5,7 +5,7 @@ const { v4: uuidv4 } = require('uuid'); // For generating session IDs
 require('dotenv').config();
 const bcrypt = require('bcryptjs'); 
 const jwt = require('jsonwebtoken');
-const { expressjwt: jwtAuth } = require('express-jwt'); // Add this for JWT middleware
+const { expressjwt: jwtAuth } = require('express-jwt'); // Ad this for JWT middleware
 const fetch = require('node-fetch'); // Or use another request library like axios
 const { URLSearchParams } = require('url');
 const fs = require('fs'); // Import the File System module
