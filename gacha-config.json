@@ -9,10 +9,10 @@
       { "itemId": "pokemon_ditto", "itemName": "Ditto", "id": "132", "rarity": "rare", "weight": 5 },
       { "itemId": "pokemon_snorlax", "itemName": "Snorlax", "id": "143", "rarity": "rare", "weight": 5 },
       { "itemId": "pokemon_ducklett", "itemName": "Ducklett", "id": "580", "rarity": "common", "weight": 20 },
-      { "itemId": "item_great_ball", "itemName": "Great Ball", "id": null, "rarity": "uncommon", "weight": 10, "image": "https://placehold.co/100x100/4A90E2/FFFFFF?text=Great+Ball" },
-      { "itemId": "item_ultra_ball", "itemName": "Ultra Ball", "id": null, "rarity": "rare", "weight": 7, "image": "https://placehold.co/100x100/FFD700/000000?text=Ultra+Ball" },
-      { "itemId": "item_love_ball", "itemName": "Love Ball", "id": null, "rarity": "rare", "weight": 5, "image": "https://placehold.co/100x100/FFC0CB/000000?text=Love+Ball" },
-      { "itemId": "item_quick_ball", "itemName": "Quick Ball", "id": null, "rarity": "rare", "weight": 5, "image": "https://placehold.co/100x100/3498DB/FFFF00?text=Quick+Ball" },
+      { "itemId": "item_great_ball", "itemName": "Great Ball", "id": null, "rarity": "rare", "weight": 10, "image": "https://placehold.co/100x100/4A90E2/FFFFFF?text=Great+Ball" },
+      { "itemId": "item_ultra_ball", "itemName": "Ultra Ball", "id": null, "rarity": "epic", "weight": 7, "image": "https://placehold.co/100x100/FFD700/000000?text=Ultra+Ball" },
+      { "itemId": "item_love_ball", "itemName": "Love Ball", "id": null, "rarity": "epic", "weight": 5, "image": "https://placehold.co/100x100/FFC0CB/000000?text=Love+Ball" },
+      { "itemId": "item_quick_ball", "itemName": "Quick Ball", "id": null, "rarity": "epic", "weight": 5, "image": "https://placehold.co/100x100/3498DB/FFFF00?text=Quick+Ball" },
       { "itemId": "item_raw_mutton", "itemName": "Raw Mutton", "id": null, "rarity": "common", "weight": 25, "image": "https://placehold.co/100x100/E57373/FFFFFF?text=Mutton" },
       { "itemId": "pokemon_arceus_shiny", "itemName": "Shiny Arceus", "id": "493", "rarity": "mythic", "weight": 1, "image": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/shiny/493.png" }
     ],
@@ -24,10 +24,10 @@
       { "itemId": "pokemon_xerneas", "itemName": "Xerneas", "id": "716", "rarity": "legendary", "weight": 4 },
       { "itemId": "pokemon_shaymin", "itemName": "Shaymin", "id": "492", "rarity": "legendary", "weight": 5 },
       { "itemId": "pokemon_mew_shiny", "itemName": "Shiny Mew", "id": "151", "rarity": "mythic", "weight": 1, "image": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/shiny/151.png" },
-      { "itemId": "item_master_ball", "itemName": "Master Ball", "id": null, "rarity": "epic", "weight": 10, "image": "https://placehold.co/100x100/9B59B6/FFFFFF?text=Master+Ball" },
+      { "itemId": "item_master_ball", "itemName": "Master Ball", "id": null, "rarity": "legendary", "weight": 5, "image": "https://placehold.co/100x100/9B59B6/FFFFFF?text=Master+Ball" },
       { "itemId": "item_beast_ball", "itemName": "Beast Ball", "id": null, "rarity": "epic", "weight": 8, "image": "https://placehold.co/100x100/3498DB/E74C3C?text=Beast+Ball" },
       { "itemId": "item_exp_candy_xl_10", "itemName": "10x Exp. Candy XL", "id": null, "rarity": "rare", "weight": 15, "image": "https://placehold.co/100x100/F1C40F/000000?text=Candy+XL" },
-      { "itemId": "item_iv_upgrade", "itemName": "IV Upgrade", "id": null, "rarity": "epic", "weight": 10, "image": "https://placehold.co/100x100/2ECC71/FFFFFF?text=IV+Up" }
+      { "itemId": "item_iv_upgrade", "itemName": "IV Upgrade", "id": null, "rarity": "mythic", "weight": 1, "image": "https://placehold.co/100x100/2ECC71/FFFFFF?text=IV+Up" }
     ]
   }
 }
