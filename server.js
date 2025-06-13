@@ -913,7 +913,7 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
         }
 
         const user = await User.findById(userId);
-        const itemDetails = allItemsMap.get(itemId);
+        const itemDetails = { ...allItemsMap.get(itemId) }; // Create a copy to modify safely
 
         if (!user || !itemDetails) {
             return res.status(404).json({ success: false, error: 'User or item not found.' });
@@ -929,35 +929,41 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
             mythic: 15158332,     // Red
         };
 
-        // --- MODIFICATION START: Conditional text for announcement ---
-        let title, description, fieldName, fieldLabel;
+        // --- START: MODIFICATIONS FOR IMAGES AND TEXT ---
         const isPokemon = itemDetails.itemId.startsWith('pokemon_');
+        
+        // **FIX**: Robustly generate image URL if it's missing for a Pokémon
+        if (isPokemon && !itemDetails.image) {
+            const formattedName = itemDetails.itemName.toLowerCase().replace(/\s+/g, "_");
+            itemDetails.image = `https://cobbledex.b-cdn.net/mons/large/${formattedName}.webp`;
+            console.log(`Generated fallback image URL for ${itemDetails.itemName}: ${itemDetails.image}`);
+        }
+
+        let title, description, fieldName;
 
         if (isPokemon) {
             title = `A wild **${itemDetails.itemName}** appeared!`;
-            description = `**${user.username}** just pulled the **${itemDetails.rarity}** Pokémon!`;
+            description = `**${user.username}** just pulled the **${itemDetails.rarity.toUpperCase()}** Pokémon!`;
             fieldName = "Pokémon";
-            fieldLabel = itemDetails.itemName;
         } else {
             title = `A random **${itemDetails.itemName}** has just appeared!`;
-            description = `**${user.username}** just pulled a **${itemDetails.rarity}** item!`;
+            description = `**${user.username}** just pulled a **${itemDetails.rarity.toUpperCase()}** item!`;
             fieldName = "Item";
-            fieldLabel = itemDetails.itemName;
         }
-        // --- MODIFICATION END ---
+        // --- END: MODIFICATIONS ---
 
         const embed = {
             content: `<@${user.discordId}>`, 
             embeds: [{
-                title: title, // Use dynamic title
-                description: description, // Use dynamic description
+                title: title,
+                description: description,
                 color: rarityColors[itemDetails.rarity] || 0,
                 fields: [
-                    { name: fieldName, value: fieldLabel, inline: true }, // Use dynamic field name and value
-                    { name: "Rarity", value: itemDetails.rarity.charAt(0).toUpperCase() + itemDetails.rarity.slice(1), inline: true },
+                    { name: fieldName, value: itemDetails.itemName, inline: true },
+                    { name: "Rarity", value: itemDetails.rarity.toUpperCase(), inline: true }, // Rarity is now ALL CAPS
                 ],
                 image: {
-                    url: itemDetails.image,
+                    url: itemDetails.image, // Using the guaranteed image URL
                 },
                 timestamp: new Date().toISOString(),
                 footer: {
