@@ -898,9 +898,23 @@ function generateAnimationReel(packId, winningItem) {
     return reelItems;
 }
 
+// *** MODIFICATION START: Update /api/gacha/banners to include item details ***
 app.get('/api/gacha/banners', (req, res) => {
-    res.json({ success: true, banners: gachaBanners });
+    const enrichedBanners = gachaBanners.map(banner => {
+        const requiredItemDetails = allItemsMap.get(banner.requiredItemId);
+        return {
+            ...banner,
+            requiredItem: requiredItemDetails || {
+                itemId: banner.requiredItemId,
+                itemName: banner.requiredItemId,
+                image: ''
+            }
+        };
+    });
+    res.json({ success: true, banners: enrichedBanners });
 });
+// *** MODIFICATION END ***
+
 
 // --- Gacha Announcement Endpoint ---
 app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
@@ -928,11 +942,9 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
             legendary: 15844367,  // Gold
             mythic: 15158332,     // Red
         };
-
-        // --- START: MODIFICATIONS FOR IMAGES AND TEXT ---
+        
         const isPokemon = itemDetails.itemId.startsWith('pokemon_');
         
-        // **FIX**: Robustly generate image URL if it's missing for a Pokémon
         if (isPokemon && !itemDetails.image) {
             const formattedName = itemDetails.itemName.toLowerCase().replace(/\s+/g, "_");
             itemDetails.image = `https://cobbledex.b-cdn.net/mons/large/${formattedName}.webp`;
@@ -950,7 +962,6 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
             description = `**${user.username}** just pulled a **${itemDetails.rarity.toUpperCase()}** item!`;
             fieldName = "Item";
         }
-        // --- END: MODIFICATIONS ---
 
         const embed = {
             content: `<@${user.discordId}>`, 
@@ -960,10 +971,10 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
                 color: rarityColors[itemDetails.rarity] || 0,
                 fields: [
                     { name: fieldName, value: itemDetails.itemName, inline: true },
-                    { name: "Rarity", value: itemDetails.rarity.toUpperCase(), inline: true }, // Rarity is now ALL CAPS
+                    { name: "Rarity", value: itemDetails.rarity.toUpperCase(), inline: true },
                 ],
                 image: {
-                    url: itemDetails.image, // Using the guaranteed image URL
+                    url: itemDetails.image,
                 },
                 timestamp: new Date().toISOString(),
                 footer: {
