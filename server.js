@@ -918,12 +918,9 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
         if (!user || !itemDetails) {
             return res.status(404).json({ success: false, error: 'User or item not found.' });
         }
-
-        // *** MODIFICATION #1: REMOVED the rarity check to announce all rarities ***
-
+        
         // Define colors for each rarity
         const rarityColors = {
-            // *** MODIFICATION #2: ADDED common and uncommon colors ***
             common: 9807270,      // Grey
             uncommon: 8311585,    // Light Green
             rare: 3447003,        // Blue
@@ -932,17 +929,33 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
             mythic: 15158332,     // Red
         };
 
+        // --- MODIFICATION START: Conditional text for announcement ---
+        let title, description, fieldName, fieldLabel;
+        const isPokemon = itemDetails.itemId.startsWith('pokemon_');
+
+        if (isPokemon) {
+            title = `A wild **${itemDetails.itemName}** appeared!`;
+            description = `**${user.username}** just pulled the **${itemDetails.rarity}** Pokémon!`;
+            fieldName = "Pokémon";
+            fieldLabel = itemDetails.itemName;
+        } else {
+            title = `A random **${itemDetails.itemName}** has just appeared!`;
+            description = `**${user.username}** just pulled a **${itemDetails.rarity}** item!`;
+            fieldName = "Item";
+            fieldLabel = itemDetails.itemName;
+        }
+        // --- MODIFICATION END ---
+
         const embed = {
             content: `<@${user.discordId}>`, 
             embeds: [{
-                title: `A wild **${itemDetails.itemName}** appeared!`,
-                description: `**${user.username}** just pulled a **${itemDetails.rarity.toUpperCase()}** item!`,
+                title: title, // Use dynamic title
+                description: description, // Use dynamic description
                 color: rarityColors[itemDetails.rarity] || 0,
                 fields: [
-                    { name: "Item", value: itemDetails.itemName, inline: true },
+                    { name: fieldName, value: fieldLabel, inline: true }, // Use dynamic field name and value
                     { name: "Rarity", value: itemDetails.rarity.charAt(0).toUpperCase() + itemDetails.rarity.slice(1), inline: true },
                 ],
-                // *** MODIFICATION #3: CHANGED thumbnail to image for a larger picture ***
                 image: {
                     url: itemDetails.image,
                 },
