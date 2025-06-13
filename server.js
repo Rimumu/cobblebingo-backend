@@ -5,7 +5,7 @@ const { v4: uuidv4 } = require('uuid'); // For generating session IDs
 require('dotenv').config();
 const bcrypt = require('bcryptjs'); 
 const jwt = require('jsonwebtoken');
-const { expressjwt: jwtAuth } = require('express-jwt'); // Ad this for JWT middleware
+const { expressjwt: jwtAuth } = require('express-jwt'); // Add this for JWT middleware
 const fetch = require('node-fetch'); // Or use another request library like axios
 const { URLSearchParams } = require('url');
 const fs = require('fs'); // Import the File System module
@@ -902,8 +902,7 @@ app.get('/api/gacha/banners', (req, res) => {
     res.json({ success: true, banners: gachaBanners });
 });
 
-// --- START: New Gacha Announcement Endpoint ---
-// This new endpoint is solely for sending the announcement.
+// --- Gacha Announcement Endpoint ---
 app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
     try {
         const { itemId } = req.body;
@@ -935,8 +934,8 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
         };
 
         const embed = {
-            username: "Gacha Realm", // Webhook name
-            avatar_url: "https://i.imgur.com/pTcMJYJ.png", // Webhook avatar
+            // *** MODIFICATION START ***
+            // username and avatar_url REMOVED to use the webhook's default settings
             content: `<@${user.discordId}>`, // This pings the user
             embeds: [{
                 title: `A wild **${itemDetails.itemName}** appeared!`,
@@ -954,6 +953,7 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
                     text: "Cobblemon Gacha",
                 },
             }, ],
+            // *** MODIFICATION END ***
         };
         
         await sendDiscordAnnouncement(embed);
@@ -965,7 +965,6 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
         res.status(500).json({ success: false, error: 'Server error during announcement.' });
     }
 });
-// --- END: New Gacha Announcement Endpoint ---
 
 
 app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
@@ -1034,8 +1033,6 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
         const rewardForFrontend = { ...reward, name: reward.itemName };
         const animationReelForFrontend = animationReelFromServer.map(item => ({...item, name: item.itemName}));
         const finalInventory = enrichInventory(user.inventory);
-
-        // Announce logic is now REMOVED from here.
         
         res.json({ success: true, reward: rewardForFrontend, newInventory: finalInventory, animationReel: animationReelForFrontend });
 
