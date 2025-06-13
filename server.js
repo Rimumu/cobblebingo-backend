@@ -919,24 +919,21 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
             return res.status(404).json({ success: false, error: 'User or item not found.' });
         }
 
-        // Define which rarities are worth announcing
-        const announcementRarities = ['rare', 'epic', 'legendary', 'mythic'];
-        if (!announcementRarities.includes(itemDetails.rarity)) {
-            return res.json({ success: true, message: 'Item rarity not eligible for announcement.' });
-        }
-        
+        // *** MODIFICATION #1: REMOVED the rarity check to announce all rarities ***
+
         // Define colors for each rarity
         const rarityColors = {
-            rare: 3447003, // Blue
-            epic: 10181046, // Purple
-            legendary: 15844367, // Gold
-            mythic: 15158332, // Red
+            // *** MODIFICATION #2: ADDED common and uncommon colors ***
+            common: 9807270,      // Grey
+            uncommon: 8311585,    // Light Green
+            rare: 3447003,        // Blue
+            epic: 10181046,       // Purple
+            legendary: 15844367,  // Gold
+            mythic: 15158332,     // Red
         };
 
         const embed = {
-            // *** MODIFICATION START ***
-            // username and avatar_url REMOVED to use the webhook's default settings
-            content: `<@${user.discordId}>`, // This pings the user
+            content: `<@${user.discordId}>`, 
             embeds: [{
                 title: `A wild **${itemDetails.itemName}** appeared!`,
                 description: `**${user.username}** just pulled a **${itemDetails.rarity.toUpperCase()}** item!`,
@@ -945,7 +942,8 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
                     { name: "Item", value: itemDetails.itemName, inline: true },
                     { name: "Rarity", value: itemDetails.rarity.charAt(0).toUpperCase() + itemDetails.rarity.slice(1), inline: true },
                 ],
-                thumbnail: {
+                // *** MODIFICATION #3: CHANGED thumbnail to image for a larger picture ***
+                image: {
                     url: itemDetails.image,
                 },
                 timestamp: new Date().toISOString(),
@@ -953,7 +951,6 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
                     text: "Cobblemon Gacha",
                 },
             }, ],
-            // *** MODIFICATION END ***
         };
         
         await sendDiscordAnnouncement(embed);
