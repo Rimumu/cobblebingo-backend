@@ -898,7 +898,6 @@ function generateAnimationReel(packId, winningItem) {
     return reelItems;
 }
 
-// *** MODIFICATION START: Update /api/gacha/banners to include item details ***
 app.get('/api/gacha/banners', (req, res) => {
     const enrichedBanners = gachaBanners.map(banner => {
         const requiredItemDetails = allItemsMap.get(banner.requiredItemId);
@@ -913,7 +912,6 @@ app.get('/api/gacha/banners', (req, res) => {
     });
     res.json({ success: true, banners: enrichedBanners });
 });
-// *** MODIFICATION END ***
 
 
 // --- Gacha Announcement Endpoint ---
@@ -927,28 +925,28 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
         }
 
         const user = await User.findById(userId);
-        const itemDetails = { ...allItemsMap.get(itemId) }; // Create a copy to modify safely
+        const itemDetails = { ...allItemsMap.get(itemId) }; 
 
         if (!user || !itemDetails) {
             return res.status(404).json({ success: false, error: 'User or item not found.' });
         }
         
-        // Define colors for each rarity
         const rarityColors = {
-            common: 9807270,      // Grey
-            uncommon: 8311585,    // Light Green
-            rare: 3447003,        // Blue
-            epic: 10181046,       // Purple
-            legendary: 15844367,  // Gold
-            mythic: 15158332,     // Red
+            common: 9807270,      
+            uncommon: 8311585,    
+            rare: 3447003,        
+            epic: 10181046,       
+            legendary: 15844367,  
+            mythic: 15158332,     
         };
         
         const isPokemon = itemDetails.itemId.startsWith('pokemon_');
         
-        if (isPokemon && !itemDetails.image) {
-            const formattedName = itemDetails.itemName.toLowerCase().replace(/\s+/g, "_");
-            itemDetails.image = `https://cobbledex.b-cdn.net/mons/large/${formattedName}.webp`;
-            console.log(`Generated fallback image URL for ${itemDetails.itemName}: ${itemDetails.image}`);
+        // *** MODIFICATION #1: Use PokeAPI official artwork for Pokémon ***
+        if (isPokemon) {
+            const isShiny = itemDetails.itemName.toLowerCase().includes('shiny');
+            const shinyPrefix = isShiny ? 'shiny/' : '';
+            itemDetails.image = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${shinyPrefix}${itemDetails.id}.png`;
         }
 
         let title, description, fieldName;
@@ -971,7 +969,8 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
                 color: rarityColors[itemDetails.rarity] || 0,
                 fields: [
                     { name: fieldName, value: itemDetails.itemName, inline: true },
-                    { name: "Rarity", value: itemDetails.rarity.toUpperCase(), inline: true },
+                    // *** MODIFICATION #2: Capitalize only the first letter of rarity in the field ***
+                    { name: "Rarity", value: itemDetails.rarity.charAt(0).toUpperCase() + itemDetails.rarity.slice(1), inline: true },
                 ],
                 image: {
                     url: itemDetails.image,
@@ -1013,7 +1012,6 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
             user.inventory = user.inventory.filter(item => item.itemId !== banner.requiredItemId);
         }
 
-        // --- NEW MYTHIC SELECTION LOGIC ---
         let lootTable = packContents[banner.id];
         const mythicItems = lootTable.filter(item => item.rarity === 'mythic');
 
@@ -1023,7 +1021,6 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
             lootTable = [...nonMythicItems, chosenMythic];
             console.log(`Adjusted loot table for this opening. Chosen mythic: ${chosenMythic.itemName}`);
         }
-        // --- END NEW LOGIC ---
 
         const totalWeight = lootTable.reduce((sum, item) => sum + item.weight, 0);
         let randomNum = Math.random() * totalWeight;
@@ -1036,7 +1033,7 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
             randomNum -= item.weight;
         }
         if (!reward) {
-            reward = lootTable[0]; // Fallback to the first item of the adjusted table
+            reward = lootTable[0];
         }
         
         const rewardInInventory = user.inventory.find(item => item.itemId === reward.itemId);
