@@ -1002,7 +1002,6 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
             fieldName = "Item";
         }
         
-        // *** MODIFICATION START: Conditional image/thumbnail logic ***
         const embedObject = {
             title: title,
             description: description,
@@ -1017,14 +1016,9 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
             },
         };
 
-        if (isPokemon) {
-            // Use the large 'image' field for Pokémon
-            embedObject.image = { url: itemDetails.image };
-        } else {
-            // Use the smaller 'thumbnail' field for other items
-            embedObject.thumbnail = { url: itemDetails.image };
-        }
-        // *** MODIFICATION END ***
+        // *** REVERTED CHANGE: Always use the 'image' field for consistency ***
+        // You mentioned you will handle sizing manually, so this provides the large image format for all items.
+        embedObject.image = { url: itemDetails.image };
 
         const embed = {
             content: `<@${user.discordId}>`, 
