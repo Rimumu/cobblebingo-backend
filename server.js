@@ -993,17 +993,19 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
             const cobbledexUrl = `https://cobbledex.b-cdn.net/mons/large/${nonShinyName.toLowerCase().replace(/\s+/g, "_")}.webp`;
 
             try {
-                 const cobbledexResponse = await fetch(cobbledexUrl, { method: 'HEAD' });
-                 const contentLength = cobbledexResponse.headers.get('content-length');
-                 const PLACEHOLDER_SIZE_THRESHOLD = 2200; 
+                 const cobbledexResponse = await fetch(cobbledexUrl);
+                 if (!cobbledexResponse.ok) throw new Error('Cobbledex URL not OK');
 
-                if (cobbledexResponse.ok && contentLength && parseInt(contentLength, 10) > PLACEHOLDER_SIZE_THRESHOLD && !isShiny) {
-                     itemDetails.image = cobbledexUrl;
-                 } else {
-                     itemDetails.image = pokeapiUrl;
-                 }
+                 const contentLength = cobbledexResponse.headers.get('content-length');
+                 const PLACEHOLDER_SIZE_MIN = 2160;
+                 const PLACEHOLDER_SIZE_MAX = 2180; 
+
+                if (contentLength && parseInt(contentLength, 10) >= PLACEHOLDER_SIZE_MIN && parseInt(contentLength, 10) <= PLACEHOLDER_SIZE_MAX) {
+                     throw new Error("Placeholder image detected from content-length");
+                }
+                itemDetails.image = cobbledexUrl;
             } catch (e) {
-                console.warn(`Could not check Cobbledex for ${itemDetails.itemName}, falling back to PokeAPI.`);
+                console.warn(`Could not use Cobbledex for ${itemDetails.itemName} (${e.message}), falling back to PokeAPI.`);
                 itemDetails.image = pokeapiUrl;
             }
         }
