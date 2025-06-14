@@ -349,9 +349,8 @@ const userSchema = new mongoose.Schema({
     minlength: 6
   },
   discordId: {
-    type: String,
-    default: null
-    // We will define the index at the schema level below
+    type: String
+    // No default value, so it will be undefined if not provided
   },
   discordUsername: {
     type: String,
@@ -378,6 +377,7 @@ const userSchema = new mongoose.Schema({
   }
 });
 
+// Keep this line in server.js after the schema definition
 userSchema.index({ discordId: 1 }, { unique: true, sparse: true });
 
 // Hash password before saving
