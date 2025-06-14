@@ -985,6 +985,7 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
         
         const isPokemon = itemDetails.itemId.startsWith('pokemon_');
         
+        // Re-implementing the Cobbledex fallback logic
         if (isPokemon) {
             const isShiny = itemDetails.itemName.toLowerCase().includes('shiny');
             const shinyPrefix = isShiny ? 'shiny/' : '';
