@@ -669,7 +669,6 @@ app.get('/api/user/me', authMiddleware, async (req, res) => {
     }
 });
 
-// *** MODIFICATION START: New endpoint to sync inventory ***
 app.post('/api/user/sync-inventory', authMiddleware, async (req, res) => {
     try {
         const user = await User.findById(req.auth.user.id);
@@ -679,17 +678,14 @@ app.post('/api/user/sync-inventory', authMiddleware, async (req, res) => {
 
         let inventoryModified = false;
         
-        // Filter out items that no longer exist in the master list
         const validInventory = user.inventory.filter(item => allItemsMap.has(item.itemId));
 
         if (validInventory.length !== user.inventory.length) {
             inventoryModified = true;
         }
 
-        // Synchronize data for the remaining valid items
         const syncedInventory = validInventory.map(item => {
             const masterItem = allItemsMap.get(item.itemId);
-            // Check if any data is out of sync before marking as modified
             if (item.itemName !== masterItem.itemName || item.image !== masterItem.image) {
                 inventoryModified = true;
             }
@@ -700,14 +696,12 @@ app.post('/api/user/sync-inventory', authMiddleware, async (req, res) => {
             };
         });
 
-        // If changes were made, save the user document
         if (inventoryModified) {
             user.inventory = syncedInventory;
             await user.save();
             console.log(`✅ Synced and cleaned inventory for user: ${user.username}`);
         }
 
-        // Return the fully enriched, synced inventory
         res.json({ success: true, inventory: enrichInventory(user.inventory) });
 
     } catch (error) {
@@ -715,7 +709,6 @@ app.post('/api/user/sync-inventory', authMiddleware, async (req, res) => {
         res.status(500).json({ success: false, error: 'Server error during inventory sync.' });
     }
 });
-// *** MODIFICATION END ***
 
 
 app.post('/api/auth/discord/unlink', authMiddleware, async (req, res) => {
@@ -914,14 +907,14 @@ const gachaBanners = [
     {
         id: 'lamb_chop_pack',
         name: 'Lamb Chop Pack',
-        description: 'A hearty pack with a chance to contain some delicious items Pokémon. FEATURE: Shiny Arceus',
+        description: 'A hearty pack with a chance to contain delicious and common Pokémon.',
         image: 'https://placehold.co/800x450/CD7F32/FFFFFF?text=Lamb+Chop+Pack',
         requiredItemId: 'kitchen_knife'
     },
     {
         id: 'a5_wagyu_pack',
         name: 'A5 Wagyu Pack',
-        description: 'An exquisite and rare pack with a chance to contain the most legendary and flavorful Pokémon. FEATURE: Shiny Mew',
+        description: 'An exquisite and rare pack with a chance to contain the most legendary and flavorful Pokémon.',
         image: 'https://placehold.co/800x450/B40431/FFFFFF?text=A5+Wagyu+Pack',
         requiredItemId: 'chef_knife'
     }
@@ -991,6 +984,7 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
         
         const isPokemon = itemDetails.itemId.startsWith('pokemon_');
         
+        // *** MODIFICATION #1: Use PokeAPI official artwork for Pokémon ***
         if (isPokemon) {
             const isShiny = itemDetails.itemName.toLowerCase().includes('shiny');
             const shinyPrefix = isShiny ? 'shiny/' : '';
@@ -1017,6 +1011,7 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
                 color: rarityColors[itemDetails.rarity] || 0,
                 fields: [
                     { name: fieldName, value: itemDetails.itemName, inline: true },
+                    // *** MODIFICATION #2: Capitalize only the first letter of rarity in the field ***
                     { name: "Rarity", value: itemDetails.rarity.charAt(0).toUpperCase() + itemDetails.rarity.slice(1), inline: true },
                 ],
                 image: {
