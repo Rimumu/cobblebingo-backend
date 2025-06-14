@@ -892,17 +892,15 @@ app.post('/api/inventory/use', authMiddleware, async (req, res) => {
 const gachaBanners = [
     {
         id: 'lamb_chop_pack',
-        name: 'Lamb Chop Pack',
         description: 'A hearty pack with a chance to contain delicious and common Pokémon.',
-        image: 'https://placehold.co/800x450/663300/FFFFFF?text=Lamb+Chop+Pack&font=georgia',
+        image: 'https://placehold.co/800x450/6B4F39/FFFFFF?text=Lamb+Chop+Pack&font=georgia',
         featuring: ["Shiny Arceus"],
         requiredItemId: 'kitchen_knife'
     },
     {
         id: 'a5_wagyu_pack',
-        name: 'A5 Wagyu Pack',
         description: 'An exquisite and rare pack with a chance to contain the most legendary and flavorful Pokémon.',
-        image: 'https://placehold.co/800x450/990000/FFFFFF?text=A5+Wagyu+Pack&font=playfair+display',
+        image: 'https://placehold.co/800x450/A62A2A/FFFFFF?text=A5+Wagyu+Pack&font=playfair+display',
         featuring: ["Shiny Mew", "Shaymin"],
         requiredItemId: 'chef_knife'
     }
