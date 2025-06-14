@@ -1074,15 +1074,17 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
             user.inventory = user.inventory.filter(item => item.itemId !== banner.requiredItemId);
         }
 
-        let lootTable = packContents[banner.id];
+        // --- MODIFICATION: Mythic selection logic ---
+        let lootTable = [...packContents[banner.id]]; // Create a mutable copy
         const mythicItems = lootTable.filter(item => item.rarity === 'mythic');
 
         if (mythicItems.length > 1) {
             const nonMythicItems = lootTable.filter(item => item.rarity !== 'mythic');
             const chosenMythic = mythicItems[Math.floor(Math.random() * mythicItems.length)];
-            lootTable = [...nonMythicItems, chosenMythic];
+            lootTable = [...nonMythicItems, chosenMythic]; // Rebuild the loot table for this specific pull
             console.log(`Adjusted loot table for this opening. Chosen mythic: ${chosenMythic.itemName}`);
         }
+        // --- END MODIFICATION ---
 
         const totalWeight = lootTable.reduce((sum, item) => sum + item.weight, 0);
         let randomNum = Math.random() * totalWeight;
