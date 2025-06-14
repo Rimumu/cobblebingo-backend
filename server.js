@@ -1081,7 +1081,21 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
 
         if (mythicItems.length > 1) {
             const nonMythicItems = lootTable.filter(item => item.rarity !== 'mythic');
-            const chosenMythic = mythicItems[Math.floor(Math.random() * mythicItems.length)];
+            
+            // Perform weighted random selection among mythics
+            const totalMythicChance = mythicItems.reduce((sum, item) => sum + (item.mythicChance || 1), 0);
+            let randomMythicNum = Math.random() * totalMythicChance;
+            let chosenMythic;
+            for(const item of mythicItems) {
+                const chance = item.mythicChance || 1;
+                if (randomMythicNum < chance) {
+                    chosenMythic = item;
+                    break;
+                }
+                randomMythicNum -= chance;
+            }
+            if(!chosenMythic) chosenMythic = mythicItems[0]; // Fallback
+
             lootTable = [...nonMythicItems, chosenMythic];
             console.log(`Adjusted loot table for this opening. Chosen mythic: ${chosenMythic.itemName}`);
         }
@@ -1118,9 +1132,7 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
         
         await user.save();
 
-        // *** MODIFICATION START: Pass the modified loot table to the animation reel function ***
         const animationReelFromServer = generateAnimationReel(lootTable, reward);
-        // *** MODIFICATION END ***
         
         const rewardForFrontend = { ...reward, name: reward.itemName };
         const animationReelForFrontend = animationReelFromServer.map(item => ({...item, name: item.itemName}));
