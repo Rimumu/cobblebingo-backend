@@ -984,11 +984,30 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
         
         const isPokemon = itemDetails.itemId.startsWith('pokemon_');
         
+        // Re-implementing the Cobbledex fallback logic
         if (isPokemon) {
             const isShiny = itemDetails.itemName.toLowerCase().includes('shiny');
             const shinyPrefix = isShiny ? 'shiny/' : '';
-            itemDetails.image = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${shinyPrefix}${itemDetails.id}.png`;
+            const pokeapiUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${shinyPrefix}${itemDetails.id}.png`;
+            const nonShinyName = itemDetails.itemName.replace(/shiny /i, '');
+            const cobbledexUrl = `https://cobbledex.b-cdn.net/mons/large/${nonShinyName.toLowerCase().replace(/\s+/g, "_")}.webp`;
+
+            try {
+                 const cobbledexResponse = await fetch(cobbledexUrl, { method: 'HEAD' });
+                 const contentLength = cobbledexResponse.headers.get('content-length');
+                 const PLACEHOLDER_SIZE_THRESHOLD = 2200; 
+
+                if (cobbledexResponse.ok && contentLength && parseInt(contentLength, 10) > PLACEHOLDER_SIZE_THRESHOLD && !isShiny) {
+                     itemDetails.image = cobbledexUrl;
+                 } else {
+                     itemDetails.image = pokeapiUrl;
+                 }
+            } catch (e) {
+                console.warn(`Could not check Cobbledex for ${itemDetails.itemName}, falling back to PokeAPI.`);
+                itemDetails.image = pokeapiUrl;
+            }
         }
+
 
         let title, description, fieldName;
 
@@ -1016,8 +1035,6 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
             },
         };
 
-        // *** REVERTED CHANGE: Always use the 'image' field for consistency ***
-        // You mentioned you will handle sizing manually, so this provides the large image format for all items.
         embedObject.image = { url: itemDetails.image };
 
         const embed = {
