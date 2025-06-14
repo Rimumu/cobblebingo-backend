@@ -652,26 +652,10 @@ app.get('/api/auth/discord/callback', async (req, res) => {
     }
 });
 
+// *** MODIFICATION START: Update /api/user/me to include inventory sync ***
 app.get('/api/user/me', authMiddleware, async (req, res) => {
     try {
-        const user = await User.findById(req.auth.user.id).select('-password').lean();
-        if (!user) {
-            return res.status(404).json({ success: false, error: 'User not found.' });
-        }
-
-        // Apply the enrichment function to the user's inventory
-        user.inventory = enrichInventory(user.inventory);
-
-        res.json({ success: true, user });
-    } catch (error) {
-        console.error("Error fetching user data:", error);
-        res.status(500).json({ success: false, error: 'Server error while fetching user data.' });
-    }
-});
-
-app.post('/api/user/sync-inventory', authMiddleware, async (req, res) => {
-    try {
-        const user = await User.findById(req.auth.user.id);
+        const user = await User.findById(req.auth.user.id).select('-password');
         if (!user) {
             return res.status(404).json({ success: false, error: 'User not found.' });
         }
@@ -693,22 +677,29 @@ app.post('/api/user/sync-inventory', authMiddleware, async (req, res) => {
                 ...item.toObject(),
                 itemName: masterItem.itemName,
                 image: masterItem.image,
+                id: masterItem.id || null, 
             };
         });
 
         if (inventoryModified) {
             user.inventory = syncedInventory;
             await user.save();
-            console.log(`✅ Synced and cleaned inventory for user: ${user.username}`);
+            console.log(`✅ Synced and cleaned inventory for user: ${user.username} during /me fetch`);
         }
+        
+        const userObject = user.toObject();
+        userObject.inventory = enrichInventory(userObject.inventory);
 
-        res.json({ success: true, inventory: enrichInventory(user.inventory) });
-
+        res.json({ success: true, user: userObject });
     } catch (error) {
-        console.error("Error syncing inventory:", error);
-        res.status(500).json({ success: false, error: 'Server error during inventory sync.' });
+        console.error("Error fetching user data:", error);
+        res.status(500).json({ success: false, error: 'Server error while fetching user data.' });
     }
 });
+// *** MODIFICATION END ***
+
+// *** This endpoint is no longer needed as the logic is now in /api/user/me ***
+// app.post('/api/user/sync-inventory', ...);
 
 
 app.post('/api/auth/discord/unlink', authMiddleware, async (req, res) => {
@@ -909,14 +900,16 @@ const gachaBanners = [
         name: 'Lamb Chop Pack',
         description: 'A hearty pack with a chance to contain delicious and common Pokémon.',
         image: 'https://placehold.co/800x450/663300/FFFFFF?text=Lamb+Chop+Pack',
-        featuring: ["Shiny Arceus"]
+        featuring: ["Shiny Arceus"],
+        requiredItemId: 'kitchen_knife'
     },
     {
         id: 'a5_wagyu_pack',
         name: 'A5 Wagyu Pack',
         description: 'An exquisite and rare pack with a chance to contain the most legendary and flavorful Pokémon.',
         image: 'https://placehold.co/800x450/990000/FFFFFF?text=A5+Wagyu+Pack',
-        featuring: ["Shiny Mew", "Shaymin"]
+        featuring: ["Shiny Mew", "Shaymin"],
+        requiredItemId: 'chef_knife'
     }
 ];
 
