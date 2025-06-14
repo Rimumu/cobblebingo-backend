@@ -1,4 +1,5 @@
 const express = require('express');
+const sanitizeHtml = require('sanitize-html');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid'); // For generating session IDs
@@ -1454,16 +1455,21 @@ app.put('/api/session/:sessionId/update', async (req, res) => {
 app.put('/api/session/:sessionId/save', authMiddleware, async (req, res) => {
     try {
         const { sessionId } = req.params;
-        const { sessionName } = req.body;
+        // Sanitize the user input here
+        const cleanSessionName = sanitizeHtml(req.body.sessionName, {
+            allowedTags: [], // No HTML tags allowed at all
+            allowedAttributes: {} // No attributes allowed
+        });
+
         const userId = req.auth.user.id;
 
-        if (!sessionName) {
+        if (!cleanSessionName) {
             return res.status(400).json({ success: false, error: 'sessionName is required.' });
         }
 
         const session = await BingoSession.findOneAndUpdate(
             { sessionId, userId }, // Ensure user can only save their own session
-            { isSaved: true, sessionName: sessionName, lastAccessed: new Date() },
+            { isSaved: true, sessionName: cleanSessionName, lastAccessed: new Date() }, // Use the sanitized name
             { new: true } // Return the updated document
         );
 
@@ -1481,16 +1487,21 @@ app.put('/api/session/:sessionId/save', authMiddleware, async (req, res) => {
 app.put('/api/session/:sessionId/rename', authMiddleware, async (req, res) => {
     try {
         const { sessionId } = req.params;
-        const { newName } = req.body;
+        // Sanitize the user input here
+        const cleanNewName = sanitizeHtml(req.body.newName, {
+            allowedTags: [],
+            allowedAttributes: {}
+        });
+        
         const userId = req.auth.user.id;
 
-        if (!newName) {
+        if (!cleanNewName) {
             return res.status(400).json({ success: false, error: 'newName is required.' });
         }
         
         const session = await BingoSession.findOneAndUpdate(
             { sessionId, userId },
-            { sessionName: newName },
+            { sessionName: cleanNewName }, // Use the sanitized name
             { new: true }
         );
 
@@ -1499,7 +1510,8 @@ app.put('/api/session/:sessionId/rename', authMiddleware, async (req, res) => {
         }
         res.json({ success: true, message: 'Session renamed successfully.', session });
     } catch (error) {
-        // ... error handling
+        console.error('❌ Error renaming session:', error);
+        res.status(500).json({ success: false, error: 'Server error while renaming session.' });
     }
 });
 
