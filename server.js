@@ -818,6 +818,32 @@ adminRouter.get('/codes', async (req, res) => {
     }
 });
 
+// >>>>> NEW ROUTE START
+// Reset a user's daily reward timer
+adminRouter.post('/reset-daily-reward', async (req, res) => {
+    const { username } = req.body;
+    if (!username) {
+        return res.status(400).json({ success: false, error: 'Username is required.' });
+    }
+
+    try {
+        const user = await User.findOne({ username: username.trim() });
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'User not found.' });
+        }
+
+        user.lastDailyReward = null;
+        await user.save();
+
+        res.json({ success: true, message: `Successfully reset daily reward timer for ${user.username}.` });
+
+    } catch (error) {
+        console.error(`Error resetting daily reward for ${username}:`, error);
+        res.status(500).json({ success: false, error: 'Server error while resetting timer.' });
+    }
+});
+// <<<<< NEW ROUTE END
+
 // Mount the admin router with double protection
 app.use('/api/admin', authMiddleware, adminMiddleware, adminRouter);
 
