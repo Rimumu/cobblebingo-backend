@@ -984,7 +984,6 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
         
         const isPokemon = itemDetails.itemId.startsWith('pokemon_');
         
-        // *** MODIFICATION #1: Use PokeAPI official artwork for Pokémon ***
         if (isPokemon) {
             const isShiny = itemDetails.itemName.toLowerCase().includes('shiny');
             const shinyPrefix = isShiny ? 'shiny/' : '';
@@ -1002,26 +1001,34 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
             description = `**${user.username}** just pulled a **${itemDetails.rarity.toUpperCase()}** item!`;
             fieldName = "Item";
         }
+        
+        // *** MODIFICATION START: Conditional image/thumbnail logic ***
+        const embedObject = {
+            title: title,
+            description: description,
+            color: rarityColors[itemDetails.rarity] || 0,
+            fields: [
+                { name: fieldName, value: itemDetails.itemName, inline: true },
+                { name: "Rarity", value: itemDetails.rarity.charAt(0).toUpperCase() + itemDetails.rarity.slice(1), inline: true },
+            ],
+            timestamp: new Date().toISOString(),
+            footer: {
+                text: "Cobblemon Gacha",
+            },
+        };
+
+        if (isPokemon) {
+            // Use the large 'image' field for Pokémon
+            embedObject.image = { url: itemDetails.image };
+        } else {
+            // Use the smaller 'thumbnail' field for other items
+            embedObject.thumbnail = { url: itemDetails.image };
+        }
+        // *** MODIFICATION END ***
 
         const embed = {
             content: `<@${user.discordId}>`, 
-            embeds: [{
-                title: title,
-                description: description,
-                color: rarityColors[itemDetails.rarity] || 0,
-                fields: [
-                    { name: fieldName, value: itemDetails.itemName, inline: true },
-                    // *** MODIFICATION #2: Capitalize only the first letter of rarity in the field ***
-                    { name: "Rarity", value: itemDetails.rarity.charAt(0).toUpperCase() + itemDetails.rarity.slice(1), inline: true },
-                ],
-                image: {
-                    url: itemDetails.image,
-                },
-                timestamp: new Date().toISOString(),
-                footer: {
-                    text: "Cobblemon Gacha",
-                },
-            }, ],
+            embeds: [embedObject],
         };
         
         await sendDiscordAnnouncement(embed);
