@@ -888,7 +888,7 @@ app.post('/api/inventory/use', authMiddleware, async (req, res) => {
 
 // --- GACHA SYSTEM LOGIC ---
 
-// Define the available banners on the server
+// *** MODIFICATION: Update gachaBanners with new image URLs ***
 const gachaBanners = [
     {
         id: 'lamb_chop_pack',
@@ -1063,6 +1063,7 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
             user.inventory = user.inventory.filter(item => item.itemId !== banner.requiredItemId);
         }
 
+        // *** MODIFICATION START: Corrected Mythic selection logic ***
         let lootTable = [...packContents[banner.id]]; 
         const mythicItems = lootTable.filter(item => item.rarity === 'mythic');
 
@@ -1085,6 +1086,7 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
             lootTable = [...nonMythicItems, chosenMythic];
             console.log(`Adjusted loot table for this opening. Chosen mythic: ${chosenMythic.itemName}`);
         }
+        // *** MODIFICATION END ***
 
         const totalWeight = lootTable.reduce((sum, item) => sum + item.weight, 0);
         let randomNum = Math.random() * totalWeight;
