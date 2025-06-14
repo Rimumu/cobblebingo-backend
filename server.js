@@ -922,9 +922,10 @@ const gachaBanners = [
 
 
 // --- NEW Helper function to generate the full animation reel ---
-function generateAnimationReel(packId, winningItem) {
-    const lootTable = packContents[packId];
+// *** MODIFICATION START: Accept loot table instead of packId ***
+function generateAnimationReel(lootTable, winningItem) {
     if (!lootTable) return [];
+// *** MODIFICATION END ***
 
     let reelItems = [];
     const reelLength = 80;
@@ -984,7 +985,6 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
         
         const isPokemon = itemDetails.itemId.startsWith('pokemon_');
         
-        // Re-implementing the Cobbledex fallback logic
         if (isPokemon) {
             const isShiny = itemDetails.itemName.toLowerCase().includes('shiny');
             const shinyPrefix = isShiny ? 'shiny/' : '';
@@ -1074,17 +1074,17 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
             user.inventory = user.inventory.filter(item => item.itemId !== banner.requiredItemId);
         }
 
-        // --- MODIFICATION: Mythic selection logic ---
-        let lootTable = [...packContents[banner.id]]; // Create a mutable copy
+        // *** MODIFICATION START: Corrected Mythic selection logic ***
+        let lootTable = [...packContents[banner.id]]; 
         const mythicItems = lootTable.filter(item => item.rarity === 'mythic');
 
         if (mythicItems.length > 1) {
             const nonMythicItems = lootTable.filter(item => item.rarity !== 'mythic');
             const chosenMythic = mythicItems[Math.floor(Math.random() * mythicItems.length)];
-            lootTable = [...nonMythicItems, chosenMythic]; // Rebuild the loot table for this specific pull
+            lootTable = [...nonMythicItems, chosenMythic];
             console.log(`Adjusted loot table for this opening. Chosen mythic: ${chosenMythic.itemName}`);
         }
-        // --- END MODIFICATION ---
+        // *** MODIFICATION END ***
 
         const totalWeight = lootTable.reduce((sum, item) => sum + item.weight, 0);
         let randomNum = Math.random() * totalWeight;
@@ -1117,7 +1117,10 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
         
         await user.save();
 
-        const animationReelFromServer = generateAnimationReel(banner.id, reward);
+        // *** MODIFICATION START: Pass the modified loot table to the animation reel function ***
+        const animationReelFromServer = generateAnimationReel(lootTable, reward);
+        // *** MODIFICATION END ***
+        
         const rewardForFrontend = { ...reward, name: reward.itemName };
         const animationReelForFrontend = animationReelFromServer.map(item => ({...item, name: item.itemName}));
         const finalInventory = enrichInventory(user.inventory);
