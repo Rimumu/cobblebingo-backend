@@ -652,7 +652,6 @@ app.get('/api/auth/discord/callback', async (req, res) => {
     }
 });
 
-// *** MODIFICATION START: Update /api/user/me to include inventory sync ***
 app.get('/api/user/me', authMiddleware, async (req, res) => {
     try {
         const user = await User.findById(req.auth.user.id).select('-password');
@@ -696,10 +695,6 @@ app.get('/api/user/me', authMiddleware, async (req, res) => {
         res.status(500).json({ success: false, error: 'Server error while fetching user data.' });
     }
 });
-// *** MODIFICATION END ***
-
-// *** This endpoint is no longer needed as the logic is now in /api/user/me ***
-// app.post('/api/user/sync-inventory', ...);
 
 
 app.post('/api/auth/discord/unlink', authMiddleware, async (req, res) => {
@@ -899,7 +894,7 @@ const gachaBanners = [
         id: 'lamb_chop_pack',
         name: 'Lamb Chop Pack',
         description: 'A hearty pack with a chance to contain delicious and common Pokémon.',
-        image: 'https://placehold.co/800x450/663300/FFFFFF?text=Lamb+Chop+Pack',
+        image: 'https://placehold.co/800x450/663300/FFFFFF?text=Lamb+Chop+Pack&font=georgia',
         featuring: ["Shiny Arceus"],
         requiredItemId: 'kitchen_knife'
     },
@@ -907,7 +902,7 @@ const gachaBanners = [
         id: 'a5_wagyu_pack',
         name: 'A5 Wagyu Pack',
         description: 'An exquisite and rare pack with a chance to contain the most legendary and flavorful Pokémon.',
-        image: 'https://placehold.co/800x450/990000/FFFFFF?text=A5+Wagyu+Pack',
+        image: 'https://placehold.co/800x450/990000/FFFFFF?text=A5+Wagyu+Pack&font=playfair+display',
         featuring: ["Shiny Mew", "Shaymin"],
         requiredItemId: 'chef_knife'
     }
@@ -1068,14 +1063,12 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
             user.inventory = user.inventory.filter(item => item.itemId !== banner.requiredItemId);
         }
 
-        // *** MODIFICATION START: Corrected Mythic selection logic ***
         let lootTable = [...packContents[banner.id]]; 
         const mythicItems = lootTable.filter(item => item.rarity === 'mythic');
 
         if (mythicItems.length > 1) {
             const nonMythicItems = lootTable.filter(item => item.rarity !== 'mythic');
             
-            // Perform weighted random selection among mythics
             const totalMythicChance = mythicItems.reduce((sum, item) => sum + (item.mythicChance || 1), 0);
             let randomMythicNum = Math.random() * totalMythicChance;
             let chosenMythic;
@@ -1087,12 +1080,11 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
                 }
                 randomMythicNum -= chance;
             }
-            if(!chosenMythic) chosenMythic = mythicItems[0]; // Fallback
+            if(!chosenMythic) chosenMythic = mythicItems[0]; 
 
             lootTable = [...nonMythicItems, chosenMythic];
             console.log(`Adjusted loot table for this opening. Chosen mythic: ${chosenMythic.itemName}`);
         }
-        // *** MODIFICATION END ***
 
         const totalWeight = lootTable.reduce((sum, item) => sum + item.weight, 0);
         let randomNum = Math.random() * totalWeight;
