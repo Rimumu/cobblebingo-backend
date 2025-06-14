@@ -368,6 +368,10 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
   },
+  lastDailyReward: { // *** ADD THIS FIELD ***
+      type: Date,
+      default: null
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -716,6 +720,58 @@ app.post('/api/auth/discord/unlink', authMiddleware, async (req, res) => {
     }
 });
 
+// *** MODIFICATION START: Add Daily Reward Endpoint ***
+app.post('/api/user/claim-daily', authMiddleware, async (req, res) => {
+    try {
+        const user = await User.findById(req.auth.user.id);
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'User not found.' });
+        }
+
+        const twentyFourHours = 24 * 60 * 60 * 1000;
+        const now = new Date();
+
+        if (user.lastDailyReward && (now - new Date(user.lastDailyReward)) < twentyFourHours) {
+            const nextAvailable = new Date(user.lastDailyReward.getTime() + twentyFourHours);
+            return res.status(403).json({ 
+                success: false, 
+                error: 'You have already claimed your daily reward.',
+                cooldown: true,
+                nextAvailable: nextAvailable.toISOString()
+            });
+        }
+        
+        const rewardItem = allItemsMap.get('kitchen_knife');
+        if (!rewardItem) {
+            return res.status(500).json({ success: false, error: 'Daily reward item is not configured.' });
+        }
+
+        const itemInInventory = user.inventory.find(item => item.itemId === rewardItem.itemId);
+        if (itemInInventory) {
+            itemInInventory.quantity += 1;
+        } else {
+            user.inventory.push({ ...rewardItem, quantity: 1 });
+        }
+        
+        user.lastDailyReward = now;
+        await user.save();
+        
+        const updatedInventory = enrichInventory(user.inventory);
+
+        res.json({
+            success: true,
+            message: 'Daily reward claimed!',
+            reward: { ...rewardItem, quantity: 1 },
+            newInventory: updatedInventory
+        });
+
+    } catch (error) {
+        console.error('Error claiming daily reward:', error);
+        res.status(500).json({ success: false, error: 'Server error while claiming reward.' });
+    }
+});
+// *** MODIFICATION END ***
+
 // NEW Route to get the list of possible reward items
 adminRouter.get('/reward-items', (req, res) => {
     res.json({ success: true, items: rewardableItems });
@@ -892,15 +948,15 @@ app.post('/api/inventory/use', authMiddleware, async (req, res) => {
 const gachaBanners = [
     {
         id: 'lamb_chop_pack',
-        description: 'A hearty pack with a chance to contain delicious and common Pokémon/Items.',
+        description: 'A hearty pack with a chance to contain delicious and common Pokémon.',
         image: 'https://placehold.co/800x450/6B4F39/FFFFFF?text=Lamb+Chop+Pack&font=georgia',
         featuring: ["Shiny Arceus"],
         requiredItemId: 'kitchen_knife'
     },
     {
         id: 'a5_wagyu_pack',
-        description: 'An exquisite and rare pack with a chance to contain the most legendary and flavorful Pokémon/Items.',
-        image: 'https://placehold.co/800x450/A62A2A/FFFFFF?text=A5+Wagyu+Pack&font=georgia',
+        description: 'An exquisite and rare pack with a chance to contain the most legendary and flavorful Pokémon.',
+        image: 'https://placehold.co/800x450/A62A2A/FFFFFF?text=A5+Wagyu+Pack&font=playfair+display',
         featuring: ["Shiny Mew", "Shaymin"],
         requiredItemId: 'chef_knife'
     }
