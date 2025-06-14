@@ -350,9 +350,8 @@ const userSchema = new mongoose.Schema({
   },
   discordId: {
     type: String,
-    unique: true,
-    sparse: true, // This allows multiple users to have a null value
     default: null
+    // We will define the index at the schema level below
   },
   discordUsername: {
     type: String,
@@ -378,6 +377,8 @@ const userSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+userSchema.index({ discordId: 1 }, { unique: true, sparse: true });
 
 // Hash password before saving
 userSchema.pre('save', async function(next) {
