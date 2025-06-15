@@ -1,5 +1,5 @@
+console.log('Verifying DISCORD_BOT_TOKEN:', process.env.DISCORD_BOT_TOKEN);
 const express = require('express');
-console.log('Verifying DISCORD_BOT_TOKEN:', process.env.DISCORD_BOT_TOKEN); 
 const sanitizeHtml = require('sanitize-html');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -101,29 +101,36 @@ async function sendDiscordAnnouncement(payload) {
 async function getDiscordMember(userId) {
     if (!DISCORD_BOT_TOKEN) {
         console.warn('⚠️ DISCORD_BOT_TOKEN not set. Skipping Discord role check.');
-        // Default to true if not configured to not block development
         return { inServer: true, hasRole: true };
     }
     const url = `https://discord.com/api/v10/guilds/${DISCORD_SERVER_ID}/members/${userId}`;
     try {
         const response = await fetch(url, {
-            headers: {
-                'Authorization': `Bot ${DISCORD_BOT_TOKEN}`
-            }
+            headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` }
         });
+        
+        console.log(`[DEBUG] Discord API Response Status for user ${userId}: ${response.status}`);
+
         if (!response.ok) {
-            if (response.status === 404) { // User not found in guild
+            if (response.status === 404) {
+                console.log(`[DEBUG] User ${userId} not found in Discord server.`);
                 return { inServer: false, hasRole: false };
             }
             throw new Error(`Discord API error! status: ${response.status}`);
         }
+
         const member = await response.json();
+        console.log(`[DEBUG] Member object for ${userId}:`, JSON.stringify(member.roles));
+
         const hasRole = member.roles.includes(DISCORD_ROLE_ID);
+        console.log(`[DEBUG] Checking for role ${DISCORD_ROLE_ID}. User has role? ${hasRole}`);
+
         return { inServer: true, hasRole: hasRole };
+
     } catch (error) {
         console.error('❌ Failed to get Discord member data:', error);
-        // Fail open in case of Discord API error to not block users unnecessarily
-        return { inServer: true, hasRole: true, error: true };
+        // Fail CLOSED. If we can't verify the user for any reason, deny access.
+        return { inServer: false, hasRole: false, error: true };
     }
 }
 
@@ -710,6 +717,8 @@ app.get('/api/user/me', authMiddleware, async (req, res) => {
             console.log(`🔄 Performing Discord status check for ${user.username}`);
             const { inServer, hasRole } = await getDiscordMember(user.discordId);
             
+            console.log(`[DEBUG] Discord check result for ${user.username}: inServer=${inServer}, hasRole=${hasRole}`);
+
             user.isInSteakHouse = inServer;
             user.hasCobblemonRole = hasRole;
             user.lastDiscordCheck = now;
