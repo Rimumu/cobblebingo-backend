@@ -15,6 +15,12 @@ const { Rcon } = require('rcon-client'); // Import the RCON client
 const app = express();
 const PORT = process.env.PORT || 8000;
 
+// --- Discord Configuration ---
+const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
+const DISCORD_SERVER_ID = '1336782145833668729';
+const DISCORD_ROLE_ID = '1377257848337334334';
+
+
 // --- Load Gacha Configuration from JSON file ---
 let packContents = {};
 try {
@@ -90,6 +96,35 @@ async function sendDiscordAnnouncement(payload) {
 }
 // --- END: New Helper Function ---
 
+// --- Helper function to check Discord Guild Member ---
+async function getDiscordMember(userId) {
+    if (!DISCORD_BOT_TOKEN) {
+        console.warn('⚠️ DISCORD_BOT_TOKEN not set. Skipping Discord role check.');
+        // Default to true if not configured to not block development
+        return { inServer: true, hasRole: true };
+    }
+    const url = `https://discord.com/api/v10/guilds/${DISCORD_SERVER_ID}/members/${userId}`;
+    try {
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bot ${DISCORD_BOT_TOKEN}`
+            }
+        });
+        if (!response.ok) {
+            if (response.status === 404) { // User not found in guild
+                return { inServer: false, hasRole: false };
+            }
+            throw new Error(`Discord API error! status: ${response.status}`);
+        }
+        const member = await response.json();
+        const hasRole = member.roles.includes(DISCORD_ROLE_ID);
+        return { inServer: true, hasRole: hasRole };
+    } catch (error) {
+        console.error('❌ Failed to get Discord member data:', error);
+        // Fail open in case of Discord API error to not block users unnecessarily
+        return { inServer: true, hasRole: true, error: true };
+    }
+}
 
 // Enhanced CORS configuration for Railway
 app.use(cors({
@@ -371,6 +406,9 @@ const userSchema = new mongoose.Schema({
       type: Date,
       default: null
   },
+  isInSteakHouse: { type: Boolean, default: false },
+  hasCobblemonRole: { type: Boolean, default: false },
+  lastDiscordCheck: { type: Date, default: null },
   createdAt: {
     type: Date,
     default: Date.now
@@ -597,7 +635,7 @@ app.get('/api/auth/discord', authMiddleware, (req, res) => {
         `?client_id=${process.env.DISCORD_CLIENT_ID}` +
         `&redirect_uri=${encodeURIComponent(process.env.DISCORD_REDIRECT_URI)}` +
         `&response_type=code` +
-        `&scope=identify` + // 'identify' scope gets user info without joining servers
+        `&scope=identify` +
         `&state=${req.auth.user.id}`; // Pass the user's ID to identify them on callback
 
     res.redirect(discordAuthUrl);
@@ -663,6 +701,18 @@ app.get('/api/user/me', authMiddleware, async (req, res) => {
         const user = await User.findById(req.auth.user.id).select('-password');
         if (!user) {
             return res.status(404).json({ success: false, error: 'User not found.' });
+        }
+        
+        const now = new Date();
+        const checkCooldown = 15 * 60 * 1000; // 15 minutes
+        if (user.discordId && (!user.lastDiscordCheck || (now - new Date(user.lastDiscordCheck)) > checkCooldown)) {
+            console.log(`🔄 Performing Discord status check for ${user.username}`);
+            const { inServer, hasRole } = await getDiscordMember(user.discordId);
+            
+            user.isInSteakHouse = inServer;
+            user.hasCobblemonRole = hasRole;
+            user.lastDiscordCheck = now;
+            await user.save();
         }
 
         let inventoryModified = false;
@@ -1131,10 +1181,19 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
         const { bannerId } = req.body;
         const userId = req.auth.user.id;
 
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ success: false, error: 'User not found.' });
+
+        if (!user.isInSteakHouse) {
+            return res.status(403).json({ success: false, error: 'You are not in the STEAK HOUSE Discord Server!' });
+        }
+        if (!user.hasCobblemonRole) {
+            return res.status(403).json({ success: false, error: 'You do not have the cobblemon role!' });
+        }
+
         const banner = gachaBanners.find(b => b.id === bannerId);
         if (!banner) return res.status(404).json({ success: false, error: 'Banner not found.' });
 
-        const user = await User.findById(userId);
         const inventoryItem = user.inventory.find(item => item.itemId === banner.requiredItemId);
         if (!inventoryItem || inventoryItem.quantity < 1) {
             return res.status(400).json({ success: false, error: 'You do not have the required pack.' });
