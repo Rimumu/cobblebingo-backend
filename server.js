@@ -552,10 +552,10 @@ function generateUniqueCode() {
 
 // API Routes with enhanced error handling
 
-// --- ADD NEW AUTHENTICATION API ROUTES ---
+// --- ROUTERS ---
 const authRouter = express.Router();
-// --- ADD NEW ADMIN ROUTES (Place these at the end of your API routes) ---
 const adminRouter = express.Router();
+const userRouter = express.Router();
 
 // SIGNUP
 authRouter.post('/signup', async (req, res) => {
@@ -621,7 +621,6 @@ authRouter.post('/login', async (req, res) => {
   }
 });
 
-// Mount the auth router
 app.use('/api/auth', authRouter);
 
 const optionalAuth = (req, res, next) => {
@@ -638,7 +637,7 @@ const optionalAuth = (req, res, next) => {
     next();
 };
 
-app.get('/api/auth/discord', authMiddleware, (req, res) => {
+authRouter.get('/discord', authMiddleware, (req, res) => {
     const discordAuthUrl = `https://discord.com/api/oauth2/authorize` +
         `?client_id=${process.env.DISCORD_CLIENT_ID}` +
         `&redirect_uri=${encodeURIComponent(process.env.DISCORD_REDIRECT_URI)}` +
@@ -650,7 +649,7 @@ app.get('/api/auth/discord', authMiddleware, (req, res) => {
 });
 
 // Discord redirects the user here after they authorize.
-app.get('/api/auth/discord/callback', async (req, res) => {
+authRouter.get('/discord/callback', async (req, res) => {
     const { code, state: userId } = req.query;
 
     if (!code) {
@@ -691,8 +690,7 @@ app.get('/api/auth/discord/callback', async (req, res) => {
         }
 
         user.discordId = discordUser.id;
-        // --- THIS IS THE CORRECTED LINE ---
-        user.discordUsername = discordUser.username; // No more hashtag and discriminator
+        user.discordUsername = discordUser.username;
         await user.save();
 
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5500';
@@ -704,7 +702,29 @@ app.get('/api/auth/discord/callback', async (req, res) => {
     }
 });
 
-app.get('/api/user/me', authMiddleware, async (req, res) => {
+authRouter.post('/discord/unlink', authMiddleware, async (req, res) => {
+    try {
+        const user = await User.findById(req.auth.user.id);
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'User not found.' });
+        }
+
+        user.discordId = null;
+        user.discordUsername = null;
+        await user.save();
+
+        res.json({ success: true, message: 'Discord account unlinked successfully.' });
+    } catch (error) {
+        console.error("Error unlinking discord account:", error);
+        res.status(500).json({ success: false, error: 'Server error while unlinking account.' });
+    }
+});
+
+
+// --- USER ROUTES ---
+app.use('/api/user', userRouter);
+
+userRouter.get('/me', authMiddleware, async (req, res) => {
     try {
         const user = await User.findById(req.auth.user.id).select('-password');
         if (!user) {
@@ -713,8 +733,12 @@ app.get('/api/user/me', authMiddleware, async (req, res) => {
         
         const now = new Date();
         const checkCooldown = 15 * 60 * 1000; // 15 minutes
-        if (user.discordId && (!user.lastDiscordCheck || (now - new Date(user.lastDiscordCheck)) > checkCooldown)) {
-            console.log(`🔄 Performing Discord status check for ${user.username}`);
+        const isCacheStale = !user.lastDiscordCheck || (now - new Date(user.lastDiscordCheck)) > checkCooldown;
+
+        // Automatically re-check permissions if the cache is stale OR if the user is currently marked as not having the role.
+        // This allows users who just got the role to have their status updated on the next page load.
+        if (user.discordId && (isCacheStale || user.hasCobblemonRole === false)) {
+            console.log(`🔄 Performing Discord status check for ${user.username}. Reason: ${isCacheStale ? 'Cache Stale' : 'Re-checking failed status'}`);
             const { inServer, hasRole } = await getDiscordMember(user.discordId);
             
             console.log(`[DEBUG] Discord check result for ${user.username}: inServer=${inServer}, hasRole=${hasRole}`);
@@ -762,28 +786,7 @@ app.get('/api/user/me', authMiddleware, async (req, res) => {
     }
 });
 
-
-app.post('/api/auth/discord/unlink', authMiddleware, async (req, res) => {
-    try {
-        const user = await User.findById(req.auth.user.id);
-        if (!user) {
-            return res.status(404).json({ success: false, error: 'User not found.' });
-        }
-
-        // Clear the Discord-related fields
-        user.discordId = null;
-        user.discordUsername = null;
-        await user.save();
-
-        res.json({ success: true, message: 'Discord account unlinked successfully.' });
-    } catch (error) {
-        console.error("Error unlinking discord account:", error);
-        res.status(500).json({ success: false, error: 'Server error while unlinking account.' });
-    }
-});
-
-// *** MODIFICATION START: Add Daily Reward Endpoint ***
-app.post('/api/user/claim-daily', authMiddleware, async (req, res) => {
+userRouter.post('/claim-daily', authMiddleware, async (req, res) => {
     try {
         const user = await User.findById(req.auth.user.id);
         if (!user) {
@@ -832,22 +835,35 @@ app.post('/api/user/claim-daily', authMiddleware, async (req, res) => {
         res.status(500).json({ success: false, error: 'Server error while claiming reward.' });
     }
 });
-// *** MODIFICATION END ***
 
-// NEW Route to get the list of possible reward items
+userRouter.get('/cards', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.auth.user.id;
+        const savedSessions = await BingoSession.find({ userId, isSaved: true })
+            .sort({ lastAccessed: -1 })
+            .select('sessionId sessionName cardCode lastAccessed createdAt')
+            .lean();
+
+        res.json({ success: true, cards: savedSessions });
+    } catch (error) {
+        console.error('❌ Error fetching user cards:', error);
+        res.status(500).json({ success: false, error: 'Server error while fetching cards.' });
+    }
+});
+
+// --- ADMIN ROUTES ---
+app.use('/api/admin', authMiddleware, adminMiddleware, adminRouter);
+
 adminRouter.get('/reward-items', (req, res) => {
     res.json({ success: true, items: rewardableItems });
 });
 
-// Generate a new redeem code
 adminRouter.post('/generate-code', async (req, res) => {
-    // The form now only sends itemId, quantity, etc.
     const { code, itemId, quantity, useType } = req.body;
     if (!code || !itemId || !quantity || !useType) {
         return res.status(400).json({ success: false, error: 'Missing required fields.' });
     }
     try {
-        // Find the full item details from our master list
         const itemDetails = rewardableItems.find(item => item.itemId === itemId);
         if (!itemDetails) {
             return res.status(404).json({ success: false, error: 'Invalid reward item ID selected.' });
@@ -858,7 +874,7 @@ adminRouter.post('/generate-code', async (req, res) => {
             reward: {
                 itemId: itemDetails.itemId,
                 itemName: itemDetails.itemName,
-                image: itemDetails.image, // Get the image from our master list
+                image: itemDetails.image,
                 quantity: quantity
             },
             useType
@@ -870,7 +886,6 @@ adminRouter.post('/generate-code', async (req, res) => {
     }
 });
 
-// Get all existing codes
 adminRouter.get('/codes', async (req, res) => {
     try {
         const codes = await RedeemCode.find().sort({ createdAt: -1 });
@@ -880,8 +895,6 @@ adminRouter.get('/codes', async (req, res) => {
     }
 });
 
-// >>>>> NEW ROUTE START
-// Reset a user's daily reward timer
 adminRouter.post('/reset-daily-reward', async (req, res) => {
     const { username } = req.body;
     if (!username) {
@@ -904,13 +917,9 @@ adminRouter.post('/reset-daily-reward', async (req, res) => {
         res.status(500).json({ success: false, error: 'Server error while resetting timer.' });
     }
 });
-// <<<<< NEW ROUTE END
-
-// Mount the admin router with double protection
-app.use('/api/admin', authMiddleware, adminMiddleware, adminRouter);
 
 
-// --- ADD NEW Redeem Code Route (Place this near other public API routes) ---
+// --- Public API Routes ---
 app.post('/api/redeem', authMiddleware, async (req, res) => {
     const { code } = req.body;
     const userId = req.auth.user.id;
@@ -926,7 +935,6 @@ app.post('/api/redeem', authMiddleware, async (req, res) => {
             return res.status(404).json({ success: false, error: 'Invalid code.' });
         }
 
-        // --- FIX 1: Correctly check if user has redeemed a 'one-time-per-user' code ---
         if (redeemCode.useType === 'one-time' && redeemCode.usersWhoRedeemed.length > 0) {
             return res.status(403).json({ success: false, error: 'This code has already been redeemed.' });
         }
@@ -944,7 +952,6 @@ app.post('/api/redeem', authMiddleware, async (req, res) => {
         }
         await user.save();
 
-        // --- FIX 2: Always track the redemption to count infinite codes correctly ---
         redeemCode.usersWhoRedeemed.push(userId);
         await redeemCode.save();
         
@@ -956,7 +963,6 @@ app.post('/api/redeem', authMiddleware, async (req, res) => {
     }
 });
 
-// --- API Endpoint to use an item from inventory ---
 app.post('/api/inventory/use', authMiddleware, async (req, res) => {
     const { itemId } = req.body;
     const userId = req.auth.user.id;
@@ -979,17 +985,14 @@ app.post('/api/inventory/use', authMiddleware, async (req, res) => {
             return res.status(400).json({ success: false, error: "This item is not usable." });
         }
 
-        // Connect to RCON
         rcon = await Rcon.connect({
             host: process.env.RCON_HOST,
             port: process.env.RCON_PORT,
             password: process.env.RCON_PASSWORD,
         });
 
-        // First, check if the player is online
         const listResponse = await rcon.send('list');
         if (!listResponse.includes(user.username)) {
-            // If player is not online, send specific error and do not consume the item
             return res.status(400).json({
                 success: false,
                 error: 'Player is not online.',
@@ -997,19 +1000,16 @@ app.post('/api/inventory/use', authMiddleware, async (req, res) => {
             });
         }
         
-        // If player is online, proceed to give the item
         const command = itemDetails.command.replace('{player}', user.username);
         await rcon.send(command);
         console.log(`RCON command sent for ${user.username}: "${command}".`);
 
-        // If command was successful, decrement item quantity and save user
         itemInInventory.quantity -= 1;
         if (itemInInventory.quantity <= 0) {
             user.inventory = user.inventory.filter(item => item.itemId !== itemId);
         }
         await user.save();
         
-        // Send back the updated and enriched inventory
         const finalInventory = enrichInventory(user.inventory);
 
         res.json({
@@ -1022,7 +1022,6 @@ app.post('/api/inventory/use', authMiddleware, async (req, res) => {
         console.error("Error using item:", error);
         res.status(500).json({ success: false, error: 'Failed to use item. Check server connection and try again.' });
     } finally {
-        // Ensure the RCON connection is always closed
         if (rcon) {
             await rcon.end();
         }
@@ -1031,8 +1030,6 @@ app.post('/api/inventory/use', authMiddleware, async (req, res) => {
 
 
 // --- GACHA SYSTEM LOGIC ---
-
-// *** MODIFICATION: Update gachaBanners with new image URLs ***
 const gachaBanners = [
     {
         id: 'lamb_chop_pack',
@@ -1050,13 +1047,8 @@ const gachaBanners = [
     }
 ];
 
-
-// --- NEW Helper function to generate the full animation reel ---
-// *** MODIFICATION START: Accept loot table instead of packId ***
 function generateAnimationReel(lootTable, winningItem) {
     if (!lootTable) return [];
-// *** MODIFICATION END ***
-
     let reelItems = [];
     const reelLength = 80;
     const winningIndex = 70;
@@ -1086,8 +1078,6 @@ app.get('/api/gacha/banners', (req, res) => {
     res.json({ success: true, banners: enrichedBanners });
 });
 
-
-// --- Gacha Announcement Endpoint ---
 app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
     try {
         const { itemId } = req.body;
@@ -1115,7 +1105,6 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
         
         const isPokemon = itemDetails.itemId.startsWith('pokemon_');
         
-        // Re-implementing the Cobbledex fallback logic
         if (isPokemon) {
             const isShiny = itemDetails.itemName.toLowerCase().includes('shiny');
             const shinyPrefix = isShiny ? 'shiny/' : '';
@@ -1140,7 +1129,6 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
                 itemDetails.image = pokeapiUrl;
             }
         }
-
 
         let title, description, fieldName;
 
@@ -1185,7 +1173,6 @@ app.post('/api/gacha/announce-pull', authMiddleware, async (req, res) => {
     }
 });
 
-
 app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
     try {
         const { bannerId } = req.body;
@@ -1214,7 +1201,6 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
             user.inventory = user.inventory.filter(item => item.itemId !== banner.requiredItemId);
         }
 
-        // *** MODIFICATION START: Corrected Mythic selection logic ***
         let lootTable = [...packContents[banner.id]]; 
         const mythicItems = lootTable.filter(item => item.rarity === 'mythic');
 
@@ -1237,7 +1223,6 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
             lootTable = [...nonMythicItems, chosenMythic];
             console.log(`Adjusted loot table for this opening. Chosen mythic: ${chosenMythic.itemName}`);
         }
-        // *** MODIFICATION END ***
 
         const totalWeight = lootTable.reduce((sum, item) => sum + item.weight, 0);
         let randomNum = Math.random() * totalWeight;
@@ -1285,8 +1270,7 @@ app.post('/api/gacha/open-pack', authMiddleware, async (req, res) => {
 });
 
 // --- BINGO CARD SYSTEM LOGIC ---
-// Create or get a session for a card
-app.post('/api/session/init', optionalAuth, async (req, res) => { // Added optionalAuth
+app.post('/api/session/init', optionalAuth, async (req, res) => {
   try {
     const { cardCode } = req.body;
 
@@ -1332,8 +1316,6 @@ app.post('/api/session/init', optionalAuth, async (req, res) => { // Added optio
   }
 });
 
-
-// Generate and store a new bingo card
 app.post('/api/generate-card', async (req, res) => {
   try {
     const { difficulty, pokemon } = req.body;
@@ -1420,7 +1402,6 @@ app.post('/api/generate-card', async (req, res) => {
   }
 });
 
-// Get session data
 app.get('/api/session/:sessionId', async (req, res) => {
   try {
     const { sessionId } = req.params;
@@ -1457,23 +1438,6 @@ app.get('/api/session/:sessionId', async (req, res) => {
   }
 });
 
-// GET a user's saved cards
-app.get('/api/user/cards', authMiddleware, async (req, res) => {
-    try {
-        const userId = req.auth.user.id;
-        const savedSessions = await BingoSession.find({ userId, isSaved: true })
-            .sort({ lastAccessed: -1 }) // Show most recent first
-            .select('sessionId sessionName cardCode lastAccessed createdAt') // Select only needed fields
-            .lean(); // Use .lean() for faster read-only queries
-
-        res.json({ success: true, cards: savedSessions });
-    } catch (error) {
-        console.error('❌ Error fetching user cards:', error);
-        res.status(500).json({ success: false, error: 'Server error while fetching cards.' });
-    }
-});
-
-// Update completed cells for a session
 app.put('/api/session/:sessionId/update', async (req, res) => {
   try {
     const { sessionId } = req.params;
@@ -1521,16 +1485,13 @@ app.put('/api/session/:sessionId/update', async (req, res) => {
   }
 });
 
-// SAVE a session with a name
 app.put('/api/session/:sessionId/save', authMiddleware, async (req, res) => {
     try {
         const { sessionId } = req.params;
-        // Sanitize the user input here
         const cleanSessionName = sanitizeHtml(req.body.sessionName, {
-            allowedTags: [], // No HTML tags allowed at all
-            allowedAttributes: {} // No attributes allowed
+            allowedTags: [],
+            allowedAttributes: {}
         });
-
         const userId = req.auth.user.id;
 
         if (!cleanSessionName) {
@@ -1538,9 +1499,9 @@ app.put('/api/session/:sessionId/save', authMiddleware, async (req, res) => {
         }
 
         const session = await BingoSession.findOneAndUpdate(
-            { sessionId, userId }, // Ensure user can only save their own session
-            { isSaved: true, sessionName: cleanSessionName, lastAccessed: new Date() }, // Use the sanitized name
-            { new: true } // Return the updated document
+            { sessionId, userId },
+            { isSaved: true, sessionName: cleanSessionName, lastAccessed: new Date() },
+            { new: true }
         );
 
         if (!session) {
@@ -1553,16 +1514,13 @@ app.put('/api/session/:sessionId/save', authMiddleware, async (req, res) => {
     }
 });
 
-// RENAME a session
 app.put('/api/session/:sessionId/rename', authMiddleware, async (req, res) => {
     try {
         const { sessionId } = req.params;
-        // Sanitize the user input here
         const cleanNewName = sanitizeHtml(req.body.newName, {
             allowedTags: [],
             allowedAttributes: {}
         });
-        
         const userId = req.auth.user.id;
 
         if (!cleanNewName) {
@@ -1571,7 +1529,7 @@ app.put('/api/session/:sessionId/rename', authMiddleware, async (req, res) => {
         
         const session = await BingoSession.findOneAndUpdate(
             { sessionId, userId },
-            { sessionName: cleanNewName }, // Use the sanitized name
+            { sessionName: cleanNewName },
             { new: true }
         );
 
@@ -1585,7 +1543,6 @@ app.put('/api/session/:sessionId/rename', authMiddleware, async (req, res) => {
     }
 });
 
-// DELETE a session
 app.delete('/api/session/:sessionId', authMiddleware, async (req, res) => {
     try {
         const { sessionId } = req.params;
@@ -1602,43 +1559,32 @@ app.delete('/api/session/:sessionId', authMiddleware, async (req, res) => {
     }
 });
 
-// Retrieve a bingo card by code
 app.get('/api/get-card/:code', async (req, res) => {
   try {
-    // Validate that code parameter exists
     if (!req.params.code) {
       return res.status(400).json({ 
         success: false,
         error: 'Code parameter is required.' 
       });
     }
-
     const code = req.params.code.toUpperCase().trim();
-
-    // Validate code format
     if (!/^CB[0-9A-HJ-NP-Z]{6}$/.test(code)) {
       return res.status(400).json({ 
         success: false,
         error: 'Invalid code format. Expected format: CB followed by 6 characters.' 
       });
     }
-
     const bingoCard = await BingoCard.findOne({ code });
-
     if (!bingoCard) {
       return res.status(404).json({ 
         success: false,
         error: 'Card not found. Please check the code and try again.' 
       });
     }
-
-    // Increment usage count and update last accessed
     bingoCard.usageCount += 1;
     bingoCard.lastAccessed = new Date();
     await bingoCard.save();
-
     console.log(`📋 Retrieved card: ${code} (usage: ${bingoCard.usageCount})`);
-
     res.json({
       success: true,
       code: bingoCard.code,
@@ -1647,7 +1593,6 @@ app.get('/api/get-card/:code', async (req, res) => {
       usageCount: bingoCard.usageCount,
       lastAccessed: bingoCard.lastAccessed
     });
-
   } catch (error) {
     console.error('❌ Error retrieving card:', error);
     res.status(500).json({ 
@@ -1658,10 +1603,8 @@ app.get('/api/get-card/:code', async (req, res) => {
   }
 });
 
-// Validate if a code exists
 app.get('/api/validate-code/:code', async (req, res) => {
   try {
-    // Validate that code parameter exists
     if (!req.params.code) {
       return res.status(400).json({ 
         success: false,
@@ -1669,10 +1612,7 @@ app.get('/api/validate-code/:code', async (req, res) => {
         error: 'Code parameter is required.' 
       });
     }
-
     const code = req.params.code.toUpperCase().trim();
-
-    // Validate code format
     if (!/^CB[0-9A-HJ-NP-Z]{6}$/.test(code)) {
       return res.status(400).json({ 
         success: false,
@@ -1680,16 +1620,13 @@ app.get('/api/validate-code/:code', async (req, res) => {
         error: 'Invalid code format. Expected format: CB followed by 6 characters.' 
       });
     }
-
     const bingoCard = await BingoCard.findOne({ code }).lean();
-
     res.json({
       success: true,
       exists: !!bingoCard,
       message: bingoCard ? 'Code is valid' : 'Code not found',
       code: code
     });
-
   } catch (error) {
     console.error('❌ Error validating code:', error);
     res.status(500).json({ 
@@ -1701,7 +1638,6 @@ app.get('/api/validate-code/:code', async (req, res) => {
   }
 });
 
-// Get statistics
 app.get('/api/stats', async (req, res) => {
   try {
     const [totalCards, recentCards, totalUsage] = await Promise.all([
@@ -1713,7 +1649,6 @@ app.get('/api/stats', async (req, res) => {
         { $group: { _id: null, totalUsage: { $sum: '$usageCount' } } }
       ])
     ]);
-
     res.json({
       success: true,
       stats: {
@@ -1738,7 +1673,6 @@ app.get('/api/stats', async (req, res) => {
 app.use((err, req, res, next) => {
   console.error('💥 Unhandled error:', err);
   
-  // Mongoose validation errors
   if (err.name === 'ValidationError') {
     return res.status(400).json({
       success: false,
@@ -1747,7 +1681,6 @@ app.use((err, req, res, next) => {
     });
   }
   
-  // Mongoose duplicate key error
   if (err.code === 11000) {
     return res.status(409).json({
       success: false,
@@ -1802,7 +1735,6 @@ const gracefulShutdown = (signal) => {
     });
   });
   
-  // Force close after 10 seconds
   setTimeout(() => {
     console.error('❌ Could not close connections in time, forcefully shutting down');
     process.exit(1);
@@ -1812,19 +1744,15 @@ const gracefulShutdown = (signal) => {
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-// Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
   console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
-  // Don't exit in production, let Railway handle restarts
   if (process.env.NODE_ENV !== 'production') {
     process.exit(1);
   }
 });
 
-// Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
   console.error('💥 Uncaught Exception:', error);
-  // Don't exit in production, let Railway handle restarts
   if (process.env.NODE_ENV !== 'production') {
     process.exit(1);
   }
