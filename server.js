@@ -621,6 +621,27 @@ authRouter.post('/login', async (req, res) => {
   }
 });
 
+// UNLINK DISCORD
+authRouter.post('/discord/unlink', authMiddleware, async (req, res) => {
+    try {
+        const user = await User.findById(req.auth.user.id);
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'User not found.' });
+        }
+
+        // Set to undefined to remove fields from the document, respecting the sparse unique index
+        user.discordId = undefined;
+        user.discordUsername = undefined;
+        await user.save();
+
+        res.json({ success: true, message: 'Discord account unlinked successfully.' });
+    } catch (error) {
+        console.error("Error unlinking discord account:", error);
+        res.status(500).json({ success: false, error: 'Server error while unlinking account.' });
+    }
+});
+
+
 app.use('/api/auth', authRouter);
 
 const optionalAuth = (req, res, next) => {
@@ -637,19 +658,8 @@ const optionalAuth = (req, res, next) => {
     next();
 };
 
-authRouter.get('/discord', authMiddleware, (req, res) => {
-    const discordAuthUrl = `https://discord.com/api/oauth2/authorize` +
-        `?client_id=${process.env.DISCORD_CLIENT_ID}` +
-        `&redirect_uri=${encodeURIComponent(process.env.DISCORD_REDIRECT_URI)}` +
-        `&response_type=code` +
-        `&scope=identify` +
-        `&state=${req.auth.user.id}`; // Pass the user's ID to identify them on callback
-
-    res.redirect(discordAuthUrl);
-});
-
 // Discord redirects the user here after they authorize.
-authRouter.get('/discord/callback', async (req, res) => {
+app.get('/api/auth/discord/callback', async (req, res) => {
     const { code, state: userId } = req.query;
 
     if (!code) {
@@ -702,23 +712,7 @@ authRouter.get('/discord/callback', async (req, res) => {
     }
 });
 
-authRouter.post('/discord/unlink', authMiddleware, async (req, res) => {
-    try {
-        const user = await User.findById(req.auth.user.id);
-        if (!user) {
-            return res.status(404).json({ success: false, error: 'User not found.' });
-        }
 
-        user.discordId = null;
-        user.discordUsername = null;
-        await user.save();
-
-        res.json({ success: true, message: 'Discord account unlinked successfully.' });
-    } catch (error) {
-        console.error("Error unlinking discord account:", error);
-        res.status(500).json({ success: false, error: 'Server error while unlinking account.' });
-    }
-});
 
 
 // --- USER ROUTES ---
