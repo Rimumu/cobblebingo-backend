@@ -641,25 +641,20 @@ authRouter.post('/discord/unlink', authMiddleware, async (req, res) => {
     }
 });
 
+// INITIATE DISCORD LINK
+authRouter.get('/discord', authMiddleware, (req, res) => {
+    const discordAuthUrl = `https://discord.com/api/oauth2/authorize` +
+        `?client_id=${process.env.DISCORD_CLIENT_ID}` +
+        `&redirect_uri=${encodeURIComponent(process.env.DISCORD_REDIRECT_URI)}` +
+        `&response_type=code` +
+        `&scope=identify` +
+        `&state=${req.auth.user.id}`;
 
-app.use('/api/auth', authRouter);
+    res.redirect(discordAuthUrl);
+});
 
-const optionalAuth = (req, res, next) => {
-    // This is a simple version. A more robust solution might use a library.
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return next();
-
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_default_jwt_secret');
-        req.auth = decoded; // Attach user payload to request
-    } catch (err) {
-        // Invalid token, just ignore and proceed as anonymous
-    }
-    next();
-};
-
-// Discord redirects the user here after they authorize.
-app.get('/api/auth/discord/callback', async (req, res) => {
+// HANDLE DISCORD CALLBACK
+authRouter.get('/discord/callback', async (req, res) => {
     const { code, state: userId } = req.query;
 
     if (!code) {
@@ -667,7 +662,6 @@ app.get('/api/auth/discord/callback', async (req, res) => {
     }
 
     try {
-        // ... (The code to exchange the token and get user info remains the same)
         const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
             method: 'POST',
             body: new URLSearchParams({
@@ -677,9 +671,7 @@ app.get('/api/auth/discord/callback', async (req, res) => {
                 code,
                 redirect_uri: process.env.DISCORD_REDIRECT_URI,
             }),
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         });
 
         const tokenData = await tokenResponse.json();
@@ -688,9 +680,7 @@ app.get('/api/auth/discord/callback', async (req, res) => {
         }
 
         const userResponse = await fetch('https://discord.com/api/users/@me', {
-            headers: {
-                authorization: `${tokenData.token_type} ${tokenData.access_token}`,
-            },
+            headers: { authorization: `${tokenData.token_type} ${tokenData.access_token}` },
         });
         const discordUser = await userResponse.json();
 
@@ -713,7 +703,21 @@ app.get('/api/auth/discord/callback', async (req, res) => {
 });
 
 
+app.use('/api/auth', authRouter);
 
+const optionalAuth = (req, res, next) => {
+    // This is a simple version. A more robust solution might use a library.
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return next();
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_default_jwt_secret');
+        req.auth = decoded; // Attach user payload to request
+    } catch (err) {
+        // Invalid token, just ignore and proceed as anonymous
+    }
+    next();
+};
 
 // --- USER ROUTES ---
 app.use('/api/user', userRouter);
