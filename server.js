@@ -1,4 +1,5 @@
 const express = require('express');
+console.log('Verifying DISCORD_BOT_TOKEN:', process.env.DISCORD_BOT_TOKEN); 
 const sanitizeHtml = require('sanitize-html');
 const mongoose = require('mongoose');
 const cors = require('cors');
