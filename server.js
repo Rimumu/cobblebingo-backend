@@ -1,10 +1,24 @@
-console.log('Verifying DISCORD_BOT_TOKEN:', process.env.DISCORD_BOT_TOKEN);
+// Conditionally load dotenv only in non-production environments
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
+
+// --- Environment Variable Verification ---
+// Added more logs to help you debug on Railway. Check your deployment logs.
+console.log(`🚀 Starting Cobblemon Bingo API...`);
+console.log(`- NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
+console.log(`- DISCORD_BOT_TOKEN: ${process.env.DISCORD_BOT_TOKEN ? 'Loaded' : 'MISSING'}`);
+console.log(`- MONGODB_URI: ${process.env.MONGODB_URI ? 'Loaded' : 'MISSING'}`);
+console.log(`- DISCORD_CLIENT_ID: ${process.env.DISCORD_CLIENT_ID ? 'Loaded' : 'MISSING'}`);
+console.log(`- DISCORD_WEBHOOK: ${process.env.DISCORD_ANNOUNCEMENT_WEBHOOK_URL ? 'Loaded' : 'MISSING'}`);
+console.log(`- RCON_HOST: ${process.env.RCON_HOST ? 'Loaded' : 'MISSING'}`);
+
+
 const express = require('express');
 const sanitizeHtml = require('sanitize-html');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid'); // For generating session IDs
-require('dotenv').config();
 const bcrypt = require('bcryptjs'); 
 const jwt = require('jsonwebtoken');
 const { expressjwt: jwtAuth } = require('express-jwt'); // Add this for JWT middleware
