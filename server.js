@@ -4,7 +4,6 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // --- Environment Variable Verification ---
-// Added more logs to help you debug on Railway. Check your deployment logs.
 console.log(`🚀 Starting Cobblemon Bingo API...`);
 console.log(`- NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
 console.log(`- DISCORD_BOT_TOKEN: ${process.env.DISCORD_BOT_TOKEN ? 'Loaded' : 'MISSING'}`);
@@ -18,15 +17,15 @@ const express = require('express');
 const sanitizeHtml = require('sanitize-html');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const { v4: uuidv4 } = require('uuid'); // For generating session IDs
+const { v4: uuidv4 } = require('uuid'); 
 const bcrypt = require('bcryptjs'); 
 const jwt = require('jsonwebtoken');
-const { expressjwt: jwtAuth } = require('express-jwt'); // Add this for JWT middleware
-const fetch = require('node-fetch'); // Or use another request library like axios
+const { expressjwt: jwtAuth } = require('express-jwt'); 
+const fetch = require('node-fetch'); 
 const { URLSearchParams } = require('url');
-const fs = require('fs'); // Import the File System module
-const path = require('path'); // Import the Path module
-const { Rcon } = require('rcon-client'); // Import the RCON client
+const fs = require('fs'); 
+const path = require('path'); 
+const { Rcon } = require('rcon-client'); 
 const app = express();
 const PORT = process.env.PORT || 8000;
 
@@ -34,7 +33,6 @@ const PORT = process.env.PORT || 8000;
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const DISCORD_SERVER_ID = '1336782145833668729';
 const DISCORD_ROLE_ID = '1377257848337334334';
-
 
 // --- Load Gacha Configuration from JSON file ---
 let packContents = {};
@@ -49,13 +47,12 @@ try {
     process.exit(1);
 }
 
-
-// --- 1. ADD a master list of rewardable items. Place this near the top with other definitions. ---
+// --- 1. ADD a master list of rewardable items.
 const rewardableItems = [
     { itemId: 'kitchen_knife', itemName: 'Kitchen Knife', image: 'https://i.imgur.com/2khorfF.png' },
     { itemId: 'chef_knife', itemName: 'Chef Knife', image: 'https://i.imgur.com/HDRGq9Y.png' },
-    // You can add any future items here
 ];
+
 // --- ADD JWT Middleware for protected routes ---
 const authMiddleware = jwtAuth({
   secret: process.env.JWT_SECRET || 'your_default_jwt_secret',
@@ -75,7 +72,7 @@ const authMiddleware = jwtAuth({
   }
 });
 
-// --- ADD NEW Admin-only Middleware (Place this near your authMiddleware) ---
+// --- Admin-only Middleware
 const adminMiddleware = async (req, res, next) => {
     try {
         const user = await User.findById(req.auth.user.id);
@@ -90,7 +87,6 @@ const adminMiddleware = async (req, res, next) => {
 };
 
 // --- START: New Helper Function to Send Discord Webhook ---
-// Place this function near the top with other helper functions.
 async function sendDiscordAnnouncement(payload) {
     const webhookUrl = process.env.DISCORD_ANNOUNCEMENT_WEBHOOK_URL;
     if (!webhookUrl) {
@@ -109,7 +105,6 @@ async function sendDiscordAnnouncement(payload) {
         console.error('❌ Failed to send Discord webhook announcement:', error);
     }
 }
-// --- END: New Helper Function ---
 
 // --- Helper function to check Discord Guild Member ---
 async function getDiscordMember(userId) {
@@ -151,20 +146,18 @@ async function getDiscordMember(userId) {
 // Enhanced CORS configuration for Railway
 app.use(cors({
   origin: [
-    /^https:\/\/.*\.vercel\.app$/,  // Vercel deployments
-    /^https:\/\/.*\.netlify\.app$/,  // Netlify deployments
-    /^https:\/\/.*\.railway\.app$/,  // Railway deployments
-    /^https:\/\/.*\.greatrimu\.cloud$/,  // Your custom domain
-    'https://cobblebingo.greatrimu.cloud',  // Specific frontend domain
+    /^https:\/\/.*\.vercel\.app$/,  
+    /^https:\/\/.*\.netlify\.app$/,  
+    /^https:\/\/.*\.railway\.app$/, 
+    /^https:\/\/.*\.greatrimu\.cloud$/, 
+    'https://cobblebingo.greatrimu.cloud',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'http://localhost:5500',
     'http://127.0.0.1:5500',
     'http://localhost:8000',
     'http://127.0.0.1:8000',
-    // Add specific domains
     process.env.FRONTEND_URL,
-    // Development origins
     /^http:\/\/localhost:\d+$/,
     /^http:\/\/127\.0\.0\.1:\d+$/
   ].filter(Boolean), // Remove undefined values
@@ -196,7 +189,7 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
-// Health check endpoints (important for Railway)
+// Health check endpoints
 app.get('/', (req, res) => {
   res.json({ 
     success: true, 
@@ -233,11 +226,11 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/cobble
 
 // Connection options optimized for Railway/cloud deployment
 const mongooseOptions = {
-  serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-  socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
-  maxPoolSize: 10, // Maintain up to 10 socket connections
-  minPoolSize: 1, // Maintain at least 1 socket connection
-  maxIdleTimeMS: 30000, // Close connections after 30s of inactivity
+  serverSelectionTimeoutMS: 5000, 
+  socketTimeoutMS: 45000, 
+  maxPoolSize: 10, 
+  minPoolSize: 1,
+  maxIdleTimeMS: 30000,
   retryWrites: true,
   retryReads: true
 };
@@ -360,18 +353,18 @@ const bingoSessionSchema = new mongoose.Schema({
     expires: 2592000, // 30 days TTL, same as cards
     index: true
   },
-  userId: { // Add this to link session to a user
+  userId: { 
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     index: true,
     default: null
   },
-  isSaved: { // Add this field
+  isSaved: { 
     type: Boolean,
     default: false,
     index: true
   },
-  sessionName: { // Add this field
+  sessionName: { 
     type: String,
     trim: true,
     default: null
@@ -385,11 +378,9 @@ const bingoSessionSchema = new mongoose.Schema({
 // Add compound index for querying sessions by cardCode
 bingoSessionSchema.index({ cardCode: 1, lastAccessed: -1 });
 
-// ***** THIS LINE MUST COME BEFORE generateUniqueSessionId *****
 const BingoSession = mongoose.model('BingoSession', bingoSessionSchema);
-// ***** AND ALSO BEFORE ANY OTHER USE OF BingoSession *********
 
-// --- ADD NEW USER SCHEMA after BingoSession Schema ---
+// NEW USER SCHEMA
 const userSchema = new mongoose.Schema({
   username: {
     type: String,
@@ -398,7 +389,7 @@ const userSchema = new mongoose.Schema({
     trim: true,
     minlength: 3,
     maxlength: 20,
-    match: /^[a-zA-Z0-9_]+$/ // Alphanumeric and underscores only
+    match: /^[a-zA-Z0-9_]+$/ 
   },
   password: {
     type: String,
@@ -424,7 +415,7 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
   },
-  lastDailyReward: { // *** ADD THIS FIELD ***
+  lastDailyReward: { 
       type: Date,
       default: null
   },
@@ -437,7 +428,6 @@ const userSchema = new mongoose.Schema({
   }
 });
 
-// Keep this line in server.js after the schema definition
 userSchema.index({ discordId: 1 }, { unique: true, sparse: true });
 
 // Hash password before saving
@@ -452,7 +442,7 @@ userSchema.pre('save', async function(next) {
 
 const User = mongoose.model('User', userSchema);
 
-// --- ADD NEW SCHEMA for Redeem Codes (Place this near your other schemas) ---
+// NEW SCHEMA for Redeem Codes --
 const redeemCodeSchema = new mongoose.Schema({
     code: {
         type: String,
@@ -465,7 +455,7 @@ const redeemCodeSchema = new mongoose.Schema({
         itemId: { type: String, required: true },
         itemName: { type: String, required: true },
         quantity: { type: Number, required: true, default: 1 },
-        image: { type: String, required: true } // Add the image field
+        image: { type: String, required: true } 
     },
     useType: {
         type: String,
@@ -492,7 +482,6 @@ for (const packId in packContents) {
         }
     });
 }
-
 
 // --- Create a single source of truth for all item details ---
 const allItemsMap = new Map();
@@ -526,7 +515,6 @@ function enrichInventory(inventory) {
     });
 }
 
-
 // Helper function to generate unique session IDs (using uuid)
 async function generateUniqueSessionId() {
   let sessionId;
@@ -556,7 +544,7 @@ async function generateUniqueSessionId() {
 
 // Helper function to generate unique codes
 function generateUniqueCode() {
-  const chars = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // Removed confusing characters
+  const chars = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'; 
   let code = 'CB';
   for (let i = 0; i < 6; i++) {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -720,7 +708,6 @@ authRouter.get('/discord/callback', async (req, res) => {
 app.use('/api/auth', authRouter);
 
 const optionalAuth = (req, res, next) => {
-    // This is a simple version. A more robust solution might use a library.
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return next();
 
@@ -930,7 +917,6 @@ adminRouter.post('/reset-daily-reward', async (req, res) => {
     }
 });
 
-
 // --- Public API Routes ---
 app.post('/api/redeem', authMiddleware, async (req, res) => {
     const { code } = req.body;
@@ -1039,7 +1025,6 @@ app.post('/api/inventory/use', authMiddleware, async (req, res) => {
         }
     }
 });
-
 
 // --- GACHA SYSTEM LOGIC ---
 const gachaBanners = [
