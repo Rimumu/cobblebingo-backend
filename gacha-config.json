@@ -1,21 +1,29 @@
 {
   "packContents": {
     "lamb_chop_pack": [
-      { "itemId": "pokemon_diglett", "itemName": "Diglett", "id": "50", "rarity": "common", "weight": 20, "command": "givepokemonother {player} diglett" },
-      { "itemId": "pokemon_dugtrio", "itemName": "Dugtrio", "id": "51", "rarity": "common", "weight": 15, "command": "givepokemonother {player} dugtrio" },
-      { "itemId": "pokemon_miltank", "itemName": "Miltank", "id": "241", "rarity": "common", "weight": 15, "command": "givepokemonother {player} miltank" },
-      { "itemId": "pokemon_lickitung", "itemName": "Lickitung", "id": "108", "rarity": "uncommon", "weight": 10, "command": "givepokemonother {player} lickitung" },
-      { "itemId": "pokemon_lechonk", "itemName": "Lechonk", "id": "915", "rarity": "uncommon", "weight": 10, "command": "givepokemonother {player} lechonk" },
+      { "itemId": "pokemon_diglett", "itemName": "Diglett", "id": "50", "rarity": "common", "weight": 12, "command": "givepokemonother {player} diglett" },
+      { "itemId": "pokemon_dugtrio", "itemName": "Dugtrio", "id": "51", "rarity": "common", "weight": 12, "command": "givepokemonother {player} dugtrio" },
+      { "itemId": "pokemon_weezing", "itemName": "Weezing", "id": "110", "rarity": "common", "weight": 12, "command": "givepokemonother {player} weezing" },
+      { "itemId": "pokemon_lickilicky", "itemName": "Lickilicky", "id": "463", "rarity": "uncommon", "weight": 9, "command": "givepokemonother {player} lickilicky" },
+      { "itemId": "pokemon_shinx", "itemName": "Shinx", "id": "403", "rarity": "uncommon", "weight": 9, "command": "givepokemonother {player} shinx" },
       { "itemId": "pokemon_ditto", "itemName": "Ditto", "id": "132", "rarity": "rare", "weight": 5, "command": "givepokemonother {player} ditto" },
-      { "itemId": "pokemon_snorlax", "itemName": "Snorlax", "id": "143", "rarity": "rare", "weight": 5, "command": "givepokemonother {player} snorlax" },
-      { "itemId": "item_great_ball", "itemName": "Great Ball", "id": null, "rarity": "uncommon", "weight": 10, "image": "https://wiki.cobblemon.com/images/8/80/Great_Ball_%28model%29.png", "command": "give {player} cobblemon:great_ball 1" },
+      { "itemId": "pokemon_garchomp", "itemName": "Garchomp", "id": "445", "rarity": "rare", "weight": 5, "command": "givepokemonother {player} garchomp" },
+      { "itemId": "item_great_ball", "itemName": "Great Ball", "id": null, "rarity": "uncommon", "weight": 9, "image": "https://wiki.cobblemon.com/images/8/80/Great_Ball_%28model%29.png", "command": "give {player} cobblemon:great_ball 1" },
       { "itemId": "item_ultra_ball", "itemName": "Ultra Ball", "id": null, "rarity": "rare", "weight": 7, "image": "https://wiki.cobblemon.com/images/d/d5/Ultra_Ball_%28model%29.png", "command": "give {player} cobblemon:ultra_ball 1" },
       { "itemId": "item_love_ball", "itemName": "Love Ball", "id": null, "rarity": "rare", "weight": 5, "image": "https://wiki.cobblemon.com/images/6/6a/Love_Ball_%28model%29.png", "command": "give {player} cobblemon:love_ball 1" },
       { "itemId": "item_quick_ball", "itemName": "Quick Ball", "id": null, "rarity": "rare", "weight": 5, "image": "https://wiki.cobblemon.com/images/3/32/Quick_Ball_%28model%29.png", "command": "give {player} cobblemon:quick_ball 1" },
       { "itemId": "item_raw_mutton", "itemName": "Raw Mutton", "id": null, "rarity": "common", "weight": 0.1, "image": "https://i.imgur.com/QYpyvws.png", "command": "give {player} minecraft:mutton 1" },
+      { "itemId": "item_calcium", "itemName": "Calcium", "id": null, "rarity": "rare", "weight": 6, "image": "https://wiki.cobblemon.com/images/f/f5/Calcium.png", "command": "give {player} cobblemon:calcium 1" },
+      { "itemId": "item_carbos", "itemName": "Carbos", "id": null, "rarity": "rare", "weight": 6, "image": "https://wiki.cobblemon.com/images/f/fe/Carbos.png", "command": "give {player} cobblemon:carbos 1" },
+      { "itemId": "item_hpup", "itemName": "HP Up", "id": null, "rarity": "rare", "weight": 6, "image": "https://wiki.cobblemon.com/images/1/1e/HP_Up.png", "command": "give {player} cobblemon:hp_up 1" },
+      { "itemId": "item_iron", "itemName": "Iron", "id": null, "rarity": "rare", "weight": 6, "image": "https://wiki.cobblemon.com/images/4/45/Iron.png", "command": "give {player} cobblemon:iron 1" },
+      { "itemId": "item_protein", "itemName": "Protein", "id": null, "rarity": "rare", "weight": 6, "image": "https://wiki.cobblemon.com/images/d/d8/Protein.png", "command": "give {player} cobblemon:protein 1" },
+      { "itemId": "item_zinc", "itemName": "Zinc", "id": null, "rarity": "rare", "weight": 6, "image": "https://wiki.cobblemon.com/images/c/cb/Zinc.png", "command": "give {player} cobblemon:zinc 1" },
+      { "itemId": "item_ppup", "itemName": "PP Up", "id": null, "rarity": "rare", "weight": 6, "image": "https://wiki.cobblemon.com/images/d/d2/PP_Up.png", "command": "give {player} cobblemon:pp_up 1" },
+      { "itemId": "item_ppmax", "itemName": "PP Max", "id": null, "rarity": "rare", "weight": 6, "image": "https://wiki.cobblemon.com/images/2/23/PP_Max.png", "command": "give {player} cobblemon:pp_max 1" },
       { "itemId": "item_exp_candy_xl_10", "itemName": "10x Exp. Candy XL", "id": null, "rarity": "rare", "weight": 7, "image": "https://wiki.cobblemon.com/images/c/c6/Exp._Candy_XL.png", "command": "give {player} cobblemon:exp_candy_xl 10" },
       { "itemId": "item_everstone", "itemName": "Everstone", "id": null, "rarity": "rare", "weight": 5, "image": "https://wiki.cobblemon.com/images/8/86/Everstone.png", "command": "give {player} cobblemon:everstone 1" },
-      { "itemId": "pokemon_arceus_shiny", "itemName": "Shiny Arceus", "id": "493", "rarity": "mythic", "weight": 0.5, "image": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/shiny/493.png", "command": "givepokemonother {player} arceus shiny level=15" }
+      { "itemId": "pokemon_deoxys_shiny", "itemName": "Shiny Deoxys", "id": "386", "rarity": "mythic", "weight": 0.5, "image": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/shiny/386.png", "command": "givepokemonother {player} deoxys shiny level=15" }
     ],
     "a5_wagyu_pack": [
       { "itemId": "pokemon_moltres", "itemName": "Moltres", "id": "146", "rarity": "legendary", "weight": 4, "command": "givepokemonother {player} moltres level=15" },
@@ -24,11 +32,11 @@
       { "itemId": "pokemon_metagross", "itemName": "Metagross", "id": "376", "rarity": "epic", "weight": 6, "command": "givepokemonother {player} metagross level=15" },
       { "itemId": "pokemon_arceus", "itemName": "Arceus", "id": "493", "rarity": "legendary", "weight": 2, "command": "givepokemonother {player} arceus level=15" },
       { "itemId": "pokemon_eternatus", "itemName": "Eternatus", "id": "890", "rarity": "legendary", "weight": 3, "command": "givepokemonother {player} eternatus level=15" },
-      { "itemId": "pokemon_articuno", "itemName": "Articuno", "id": "144", "rarity": "legendary", "weight": 4, "command": "givepokemonother {player} articuno level=15" },
+      { "itemId": "pokemon_baxcalibur", "itemName": "Baxcalibur", "id": "998", "rarity": "legendary", "weight": 3, "command": "givepokemonother {player} baxcalibur level=15" },
       { "itemId": "pokemon_xerneas", "itemName": "Xerneas", "id": "716", "rarity": "legendary", "weight": 4, "command": "givepokemonother {player} xerneas level=15" },
-      { "itemId": "pokemon_shaymin", "itemName": "Shaymin", "id": "492", "rarity": "mythic", "weight": 0.5, "mythicChance": 3, "command": "givepokemonother {player} shaymin level=15" },
-      { "itemId": "pokemon_mew_shiny", "itemName": "Shiny Mew", "id": "151", "rarity": "mythic", "weight": 0.5, "mythicChance": 7, "image": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/shiny/151.png", "command": "givepokemonother {player} mew shiny level=15" },
-      { "itemId": "item_master_ball", "itemName": "Master Ball", "id": null, "rarity": "epic", "weight": 5, "image": "https://wiki.cobblemon.com/images/2/28/Master_Ball_%28model%29.png", "command": "give {player} cobblemon:master_ball 1" },
+      { "itemId": "pokemon_victini_shiny", "itemName": "Shiny Victini", "id": "494", "rarity": "mythic", "weight": 0.5, "mythicChance": 2, "image": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/shiny/494.png", "command": "givepokemonother {player} victini shiny level=15" },
+      { "itemId": "pokemon_jirachi_shiny", "itemName": "Shiny Jirachi", "id": "385", "rarity": "mythic", "weight": 0.5, "mythicChance": 8, "image": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/shiny/385.png", "command": "givepokemonother {player} jirachi shiny level=15" },
+      { "itemId": "item_ancient_origin_ball", "itemName": "Ancient Origin Ball", "id": null, "rarity": "epic", "weight": 5, "image": "https://wiki.cobblemon.com/images/e/ed/Ancient_Origin_Ball_%28model%29.png", "command": "give {player} cobblemon:ancient_origin_ball 1" },
       { "itemId": "item_beast_ball", "itemName": "Beast Ball", "id": null, "rarity": "epic", "weight": 8, "image": "https://wiki.cobblemon.com/images/f/fc/Beast_Ball_%28model%29.png", "command": "give {player} cobblemon:beast_ball 1" },
       { "itemId": "item_rare_candy", "itemName": "3x Rare Candy", "id": null, "rarity": "epic", "weight": 3, "image": "https://wiki.cobblemon.com/images/a/a2/Rare_Candy.png", "command": "give {player} cobblemon:rare_candy 3" },
       { "itemId": "item_destiny_knot", "itemName": "Destiny Knot", "id": null, "rarity": "epic", "weight": 2, "image": "https://wiki.cobblemon.com/images/8/8d/Destiny_Knot.png", "command": "give {player} cobblemon:destiny_knot 1" },
@@ -43,4 +51,3 @@
     ]
   }
 }
-
