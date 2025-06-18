@@ -1033,7 +1033,7 @@ const gachaBanners = [
         name: 'Lamb Chop Pack',
         description: 'A hearty pack with a chance to contain delicious and common Pokémon/Items!.',
         image: 'https://placehold.co/800x450/6B4F39/FFFFFF?text=Lamb+Chop+Pack&font=georgia',
-        featuring: ["Shiny Arceus"],
+        featuring: ["Shiny Deoxys"],
         requiredItemId: 'kitchen_knife'
     },
     {
@@ -1041,7 +1041,7 @@ const gachaBanners = [
         name: 'A5 Wagyu Pack',
         description: 'An exquisite and rare pack with a chance to contain the most legendary and flavorful Pokémon/Items!.',
         image: 'https://placehold.co/800x450/A62A2A/FFFFFF?text=A5+Wagyu+Pack&font=georgia',
-        featuring: ["Shiny Mew", "Shaymin"],
+        featuring: ["Shiny Jirachi", "Shiny Victini"],
         requiredItemId: 'chef_knife'
     }
 ];
